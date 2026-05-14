@@ -85,6 +85,8 @@ By putting individual splits in their own table, I can use a simple SUM() query 
 
 --> Wrapping the expense adding(receipt) and expense split queries inside a transaction, suppose I add expense that SKS paid 30 inr for coffee, the next step is to put 3 rows of 10 inr each of the 3 users in the split table but if server crashes before 2nd step, then the expense table has data that 30 inr are paid for coffee, but the split table doesnt have the members who were involved in it, it is an orphaned transaction, so we make these 2 steps as a single SQL transaction ->
 
+```
+
 BEGIN TRANSACTION; -- Tell the DB to wait before making it permanent
 
 -- Step 1
@@ -95,5 +97,7 @@ INSERT INTO Expense_Splits (user_id, amount) VALUES (Friend_A, 10);
 INSERT INTO Expense_Splits (user_id, amount) VALUES (Friend_B, 10);
 
 COMMIT; -- If everything above worked perfectly, save it permanently!
+
+```
 
 
