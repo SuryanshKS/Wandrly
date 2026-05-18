@@ -1,4 +1,6 @@
 import prisma from "../config/prisma.js";
+import { generativeStructuredAIResponse } from "./llmService.js";
+import { getWeatherForecast } from "./weatherService.js";
 
 //helper for verifying edit access
 const verifyWriteAccess = async(userId,tripId)=>{
@@ -90,3 +92,83 @@ export const removePackingItem = async(userId,tripId,itemId)=>{
         }
     });
 };
+
+
+export const generateSmartPackingList = async(userId,tripId)=>{
+    //1. verify member permissions
+    const member = await prisma.tripMember.findUnique({
+        where: { trip_id_user_id: { trip_id: tripId, user_id: userId } }
+    });
+    if (!member || member.role === 'VIEWER') throw new Error("NOT_AUTHORIZED_LOGISTICS");
+
+    //2. fetch trip details and itenary context
+    const trip = await prisma.trip.findUnique({
+        where:{
+            id:tripId
+        },
+        include:{
+            events:{
+                orderBy:{
+                    start_time:'asc'
+                }
+            }
+        }
+    });
+    if (!trip) throw new Error("TRIP_NOT_FOUND");
+
+    //3. fetch weather data
+    const weatherForecast = await getWeatherForecast(trip.destination,trip.start_date,trip.end_date);
+
+
+    //4. construct the dataset for LLM context
+    const itenarySummary = trip.events.map(e => `- Activity: "${e.title}" | Vibe: ${e.intensity_level}`).join('\n');
+
+    const systemPrompt = `
+        You are Wandrly's Expert Travel AI Assistant. Your job is to generate a highly tailored packing list for a group trip based on the destination, weather forecast, and specific planned itinerary activities.
+        
+        CRITICAL RULES:
+        1. Provide contextual, smart items. If there is a beach activity, include swimwear. If it rains, include an umbrella or poncho. If it's cold at night, include a jacket.
+        2. Keep the list concise and high-quality (maximum 10 essential items).
+        3. You must output exactly a JSON object containing a top-level key "items" which is an array of objects. 
+        4. Do not include any formatting markdown like \`\`\`json.
+        
+        EXACT JSON OUTPUT FORMAT REQUIRED:
+        {
+            "items": [
+                {
+                    "item_name": "Item Name here",
+                    "auto_generated_reason": "Brief, helpful sentence explaining why this item is recommended based on the specific weather or activity."
+                }
+            ]
+        }
+    `;
+
+    const userContext = `
+        Destination: ${trip.destination}
+        Trip Timeline: From ${trip.start_date.toISOString().split('T')[0]} to ${trip.end_date.toISOString().split('T')[0]}
+        Weather Outlook: ${weatherForecast}
+        Planned Activities:
+        ${itenarySummary || "No specific activities planned yet. Suggest general essentials for this destination."}
+    `;
+
+    //5. fire the request to the central AI core
+    const aiData = await generativeStructuredAIResponse(systemPrompt,userContext);
+
+    if (!aiData || !aiData.items || !Array.isArray(aiData.items)) {
+        throw new Error("AI_MALFORMED_RESPONSE");
+    }
+
+
+    //6. bulk write the items to postgres
+    const createdItems = await prisma.$transaction(
+        aiData.items.map(item=>prisma.packingList.create({
+            data:{
+                trip_id:tripId,
+                item_name:item.item_name,
+                auto_generated_reason:item.auto_generated_reason
+            }
+        }))
+    );
+
+    return createdItems;
+}

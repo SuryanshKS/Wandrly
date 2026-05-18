@@ -1,4 +1,4 @@
-import { addPackingItem, getPackingList, removePackingItem, updatePackingItem } from "../services/packingService.js";
+import { addPackingItem, getPackingList, removePackingItem, updatePackingItem , generateSmartPackingList} from "../services/packingService.js";
 import asyncHandler from "../utils/asyncHandler.js";
 
 
@@ -86,3 +86,33 @@ export const deleteItem = asyncHandler(async(req,res)=>{
         throw error;
     }
 });
+
+
+
+export const triggerAiPacking = asyncHandler(async(req,res)=>{
+    const {tripId} = req.params;
+    const userId = req.user.id;
+
+    try{
+        const items = await generateSmartPackingList(userId,tripId);
+        res.status(201).json({ 
+            status: "success", 
+            message: `Successfully generated and inserted ${items.length} AI-recommended items.`, 
+            items 
+        });
+    }catch (error) {
+        if (error.message === "NOT_AUTHORIZED_LOGISTICS") {
+            res.status(403);
+            throw new Error("Forbidden: Viewers cannot trigger AI automation layers.");
+        }
+        if (error.message === "TRIP_NOT_FOUND") {
+            res.status(404);
+            throw new Error("Target trip record could not be found.");
+        }
+        if (error.message === "AI_GENERATION_FAILED" || error.message === "AI_MALFORMED_RESPONSE") {
+            res.status(502);
+            throw new Error("Bad Gateway: The AI engine failed to return a valid structured payload.");
+        }
+        throw error;
+    }
+})

@@ -1,32 +1,34 @@
+import { useReducer } from "react";
 import prisma from "../config/prisma.js";
+import { generativeStructuredAIResponse } from "./llmService.js";
 
 //helper to check write permissions 
-const verifyWriteAccess = async(userId,tripId)=>{
+const verifyWriteAccess = async (userId, tripId) => {
     const member = await prisma.tripMember.findUnique({
-        where:{
-            trip_id_user_id:{
+        where: {
+            trip_id_user_id: {
                 trip_id: tripId,
                 user_id: userId
             }
         }
     });
-    if(!member || member.role === 'VIEWER'){
+    if (!member || member.role === 'VIEWER') {
         throw new Error("NOT_AUTHORIZED_LOGISTICS");
     }
     return true;
 };
 
 //1. create an itinerary event for a trip
-export const createItineraryEvent = async(userId,tripId,eventData)=>{
-    await verifyWriteAccess(userId,tripId);//check if the user has permission to modify the trip's logistics (only ADMIN and EDITOR can)
+export const createItineraryEvent = async (userId, tripId, eventData) => {
+    await verifyWriteAccess(userId, tripId);//check if the user has permission to modify the trip's logistics (only ADMIN and EDITOR can)
 
-    const {title, start_time, end_time, lat, lng, intensity_level} = eventData;
+    const { title, start_time, end_time, lat, lng, intensity_level } = eventData;
 
     //chronological integrity check: start_time should be before end_time
     if (new Date(start_time) >= new Date(end_time)) {
         throw new Error("INVALID_TIMEFRAME");
     }
-    
+
     return await prisma.itineraryEvent.create({
         data: {
             trip_id: tripId,
@@ -42,7 +44,7 @@ export const createItineraryEvent = async(userId,tripId,eventData)=>{
 
 
 //2. read the whole schedule of itinerary events for a trip
-export const getTripItenary = async(userId,tripId)=>{
+export const getTripItenary = async (userId, tripId) => {
     const member = await prisma.tripMember.findUnique({
         where: { trip_id_user_id: { trip_id: tripId, user_id: userId } }
     });
@@ -50,10 +52,10 @@ export const getTripItenary = async(userId,tripId)=>{
 
     //fetch all itinerary events for the trip, ordered by start_time
     return await prisma.itineraryEvent.findMany({
-        where:{
+        where: {
             trip_id: tripId
         },
-        orderBy:{
+        orderBy: {
             start_time: 'asc'
         }
     })
@@ -61,13 +63,13 @@ export const getTripItenary = async(userId,tripId)=>{
 
 
 //3. delete an event
-export const deleteItenaryEvent = async(userId,tripId,eventId)=>{
+export const deleteItenaryEvent = async (userId, tripId, eventId) => {
     //check if the user has permission to modify the trip's logistics (only ADMIN and EDITOR can)
-    await verifyWriteAccess(userId,tripId);
+    await verifyWriteAccess(userId, tripId);
 
     //delete the event, but only if it belongs to the specified trip
     return await prisma.itineraryEvent.deleteMany({
-        where:{
+        where: {
             id: eventId,
             trip_id: tripId
         }
@@ -76,9 +78,9 @@ export const deleteItenaryEvent = async(userId,tripId,eventId)=>{
 }
 
 
-export const updateItenaryEvent = async(userId, tripId,eventId,updatedData)=>{
+export const updateItenaryEvent = async (userId, tripId, eventId, updatedData) => {
     //1. check if user is ADMIN or EDITOR of the trip
-    await verifyWriteAccess(userId,tripId);
+    await verifyWriteAccess(userId, tripId);
 
     //2. tenant isolation check : does the event actually belong to the trip?
     const existingEvent = await prisma.itineraryEvent.findFirst({
@@ -102,10 +104,10 @@ export const updateItenaryEvent = async(userId, tripId,eventId,updatedData)=>{
 
     //4. peform the update
     return await prisma.itineraryEvent.update({
-        where:{
+        where: {
             id: eventId
         },
-        data:{
+        data: {
             title: updatedData.title,
             start_time: updatedData.start_time ? new Date(updatedData.start_time) : undefined,
             end_time: updatedData.end_time ? new Date(updatedData.end_time) : undefined,
@@ -114,4 +116,108 @@ export const updateItenaryEvent = async(userId, tripId,eventId,updatedData)=>{
             intensity_level: updatedData.intensity_level
         }
     });
+};
+
+export const analyzeAndFillGaps = async (userId, tripId, targetDateStr) => {
+    // 1. Enforce Trip Membership
+    const member = await prisma.tripMember.findUnique({
+        where: { trip_id_user_id: { trip_id: tripId, user_id: userId } }
+    });
+    if (!member) throw new Error("NOT_A_MEMBER");
+
+    //2. parse target date boundaries
+    const startOfDay = new Date(`${targetDateStr}T00:00:00.000Z`);
+    const endOfDay = new Date(`${targetDateStr}T23:59:59.999Z`);
+
+    //3. fetch all events of this day in sorted order
+    const events = await prisma.itineraryEvent.findMany({
+        where: {
+            trip_id: tripId,
+            start_time: {
+                gte: startOfDay,
+                lte: endOfDay
+            }
+        },
+        orderBy: {
+            start_time: 'asc'
+        }
+    });
+
+    //4. gap detection
+    const detectedGaps = [];
+
+    for (let i = 0; i < events.length - 1; i++) {
+        const currEvent = events[i];
+        const nextEvent = events[i + 1];
+
+        const gapInMilliseconds = nextEvent.start_time.getTime() - currEvent.end_time.getTime();
+
+        const gapInHours = gapInMilliseconds / (1000 * 60 * 60);
+
+        //if more than 1 hr, flag it for LLM
+        if (gapInHours >= 1.0) {
+            detectedGaps.push({
+                gap_start: currEvent.end_time.toISOString(),
+                gap_end: nextEvent.start_time.toISOString(),
+                duration_hours: gapInHours.toFixed(1),
+                origin_location: {
+                    title: currEvent.title,
+                    lat: currEvent.lat ? parseFloat(currEvent.lat) : null,
+                    lng: currEvent.lng ? parseFloat(currEvent.lng) : null
+                },
+                destination_location: {
+                    title: nextEvent.title,
+                    lat: nextEvent.lat ? parseFloat(nextEvent.lat) : null,
+                    lng: nextEvent.lng ? parseFloat(nextEvent.lng) : null
+                }
+            })
+        }
+    }
+
+    //if no gaps exit early
+    if (detectedGaps.length === 0) {
+        return { message: "Your schedule is perfectly optimized! No gaps detected.", suggestions: [] };
+    }
+
+    //5. contstruct contextual AI prompt
+    const systemPrompt = `
+        You are Wandrly's Geospatial Travel Assistant. Your job is to look at empty gaps of time between a group's planned travel activities and suggest 2-3 highly specific, low-commitment activities to fill that gap.
+        
+        CRITICAL RULES:
+        1. Recommendations MUST be physically close to the coordinate boundaries provided.
+        2. Suggest quick, easy things: a highly-rated local coffee shop, a nearby scenic viewpoint, a park, or a quick museum walk. Avoid suggesting major excursions that take half a day.
+        3. You must output exactly a JSON object matching the required format. Do not add markdown wrapping.
+        
+        EXACT JSON OUTPUT FORMAT REQUIRED:
+        {
+            "gaps_analyzed": [
+                {
+                    "time_window": "11:00 AM - 2:00 PM",
+                    "recommendations": [
+                        {
+                            "activity_title": "Cafe Name or Spot Name",
+                            "type": "Cafe / Viewpoint / Park / Quick Stop",
+                            "description": "Short description of why this is a perfect stopover between Activity A and Activity B.",
+                            "estimated_duration": "45 mins"
+                        }
+                    ]
+                }
+            ]
+        }
+    `;
+
+
+    const userContext = `
+        Target Date Analyzed: ${targetDateStr}
+        Identified Timeline Gaps:
+        ${JSON.stringify(detectedGaps, null, 2)}
+    `;
+
+    //6. execute AI processing
+    const aiSuggestions = await generativeStructuredAIResponse(systemPrompt,userContext);
+    return {
+        date: targetDateStr,
+        total_gaps_found: detectedGaps.length,
+        ...aiSuggestions
+    };
 }

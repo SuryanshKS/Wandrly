@@ -3,8 +3,8 @@ import { createTrip, getMyTrips, inviteMember, removeMember, updateRole } from '
 import { protect } from '../middlewares/authMiddleware.js';
 import { addExpense, settleDebt } from '../controllers/expenseController.js';
 import { getTripSettlements } from '../controllers/settlementController.js';
-import { addEvent, editEvent, getEvents, removeEvent } from '../controllers/itenaryController.js';
-import { addItem, deleteItem, getItems, updateItem } from '../controllers/packingController.js';
+import { addEvent, editEvent, fillItenaryGaps, getEvents, removeEvent } from '../controllers/itenaryController.js';
+import { addItem, deleteItem, getItems, triggerAiPacking, updateItem } from '../controllers/packingController.js';
 import { addPoll, getPolls, voteInPoll } from '../controllers/pollController.js';
 import { getVibeCheck } from '../controllers/analyticsController.js';
 
@@ -49,5 +49,9 @@ router.post('/:tripId/polls/:pollId/vote', voteInPoll);//POST /api/trips/:tripId
 
 //analytics engine
 router.get('/:tripId/analytics/pacing',getVibeCheck);
+
+//ai automation routes
+router.post('/:tripId/packing/auto-generate',triggerAiPacking);//for packing list based on weather and events
+router.get('/:tripId/itenary/fill-gaps',fillItenaryGaps);//for fill-the-gap feature
 
 export default router;

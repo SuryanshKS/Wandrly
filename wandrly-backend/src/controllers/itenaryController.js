@@ -1,4 +1,4 @@
-import { createItineraryEvent, deleteItenaryEvent, getTripItenary, updateItenaryEvent } from "../services/itenaryService.js";
+import { analyzeAndFillGaps, createItineraryEvent, deleteItenaryEvent, getTripItenary, updateItenaryEvent } from "../services/itenaryService.js";
 import asyncHandler from "../utils/asyncHandler.js";
 
 export const addEvent = asyncHandler(async(req,res)=>{
@@ -99,3 +99,31 @@ export const editEvent = asyncHandler(async(req,res)=>{
         throw error;
     }
 })
+
+
+
+export const fillItenaryGaps = asyncHandler(async(req,res)=>{
+    const {tripId} = req.params;
+    const {date} = req.query;// Expecting date format passed as a query param: ?date=2026-06-15
+    const userId = req.user.id;
+
+    if(!date){
+        res.status(400);
+        throw new Error("Please specify a target date query parameter in YYYY-MM-DD format.");
+    }
+
+    try{
+        const structuralGaps = await analyzeAndFillGaps(userId,tripId,date);
+        res.status(200).json({ status: "success", data: structuralGaps });
+    }catch (error) {
+        if (error.message === "NOT_A_MEMBER") {
+            res.status(403);
+            throw new Error("Forbidden: You must be an active trip member to use the AI assistant.");
+        }
+        if (error.message === "AI_GENERATION_FAILED") {
+            res.status(502);
+            throw new Error("Bad Gateway: The AI suggestions matrix failed to compile.");
+        }
+        throw error;
+    }
+});
