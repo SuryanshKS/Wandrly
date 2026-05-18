@@ -75,6 +75,41 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         console.log(`❌ User disconnected: ${socket.id}`);
     });
+
+
+    //TRANSIENT GEOLOCATION ENGINE
+    
+    //1. user activates live location sharing for a specific event
+    socket.on('join_meeting_room',({eventId,userId,userName})=>{
+        socket.join(`event_location_${eventId}`);
+
+        console.log(`📍 User ${userName} (${userId}) is sharing location for event: ${eventId}`);
+        
+        // Broadcast to the room that a new member is active on the map
+        socket.to(`event_location_${eventId}`).emit('member_joined_map', { userId, userName });
+    });
+
+
+    //2. high frequency coordinator stream
+    socket.on('share_location',({eventId,userId,lat,lng})=>{
+        // Use socket.to().emit() to send it to EVERYONE ELSE in the room except the sender
+        socket.to(`event_location_${eventId}`).emit('location_updated', {
+            userId,
+            lat,
+            lng,
+            timestamp: new Date().toISOString()
+        });
+    });
+
+    //3. user manually turns off location sharing or closes the map
+    socket.on('leave_meeting_point',({eventId,userId,userName})=>{
+        socket.leave(`event_location_${eventId}`);
+        console.log(`🚪 User ${userName} stopped sharing location for event: ${eventId}`);
+        
+        // Tell the frontend to wipe this user's marker off the map
+        io.to(`event_location_${eventId}`).emit('member_left_map', { userId });
+    });
+
 })
 
 // //start server
