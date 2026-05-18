@@ -6,6 +6,7 @@ import { getTripSettlements } from '../controllers/settlementController.js';
 import { addEvent, editEvent, getEvents, removeEvent } from '../controllers/itenaryController.js';
 import { addItem, deleteItem, getItems, updateItem } from '../controllers/packingController.js';
 import { addPoll, getPolls, voteInPoll } from '../controllers/pollController.js';
+import { getVibeCheck } from '../controllers/analyticsController.js';
 
 const router = express.Router();
 
@@ -45,5 +46,8 @@ router.delete('/:tripId/packing/:itemId', deleteItem);//DELETE /api/trips/:tripI
 router.post('/:tripId/polls', addPoll);//POST /api/trips/:tripId/polls
 router.get('/:tripId/polls', getPolls);//GET /api/trips/:tripId/polls
 router.post('/:tripId/polls/:pollId/vote', voteInPoll);//POST /api/trips/:tripId/polls/:pollId/vote
+
+//analytics engine
+router.get('/:tripId/analytics/pacing',getVibeCheck);
 
 export default router;
