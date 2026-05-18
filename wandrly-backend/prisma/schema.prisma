@@ -1,0 +1,179 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+// THE USERS
+model User{
+    id             String     @id @default(uuid())
+    name           String
+    email          String     @unique
+    password_hash  String
+    created_at     DateTime     @default(now())
+    upi_id         String?
+
+    //relationships - used by prisma to understand connection b/w tables
+    created_Trips  Trip[]     @relation("TripCreator")
+    memberships    TripMember[]
+    expenses_paid  Expense[]
+    expense_splits ExpenseSplit[]
+    uploaded_media TripMedia[]
+    created_polls  Poll[]
+    votes          Vote[]
+}
+
+// THE TRIPS (GROUPS)
+model Trip{
+    id                 String     @id @default(uuid())
+  title              String
+  destination        String
+  start_date         DateTime
+  end_date           DateTime
+  public_share_token String?    @unique // Nullable, generated when they click "Export Travelogue"
+  
+  created_by         String
+  creator            User       @relation("TripCreator", fields: [created_by], references: [id])
+
+  members            TripMember[]
+  events             ItineraryEvent[]
+  expenses           Expense[]
+  media              TripMedia[]
+  packing_list       PackingList[]
+  polls              Poll[]
+}
+
+// THE JOIN TABLE (Permissions)
+model TripMember{
+    trip_id  String
+  user_id  String
+  role     Role     @default(VIEWER)
+
+  trip     Trip     @relation(fields: [trip_id], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  // Composite Primary Key (A user can only have one role per trip)
+  @@id([trip_id, user_id])
+}
+
+// THE ITENARY
+model ItineraryEvent {
+  id              String   @id @default(uuid())
+  trip_id         String
+  title           String
+  start_time      DateTime
+  end_time        DateTime
+  lat             Decimal? // For the geospatial "Fill the Gap" feature
+  lng             Decimal?
+  intensity_level Intensity @default(MEDIUM) // For the "Vibe Check" feature
+
+  trip            Trip      @relation(fields: [trip_id], references: [id], onDelete: Cascade)
+  media           TripMedia[]
+}
+
+// THE FINANCIAL (TWO TABLES!)
+model Expense{
+    id           String    @id @default(uuid())
+    trip_id      String
+    paid_by      String
+    total_amount Decimal
+    description  String
+
+    trip         Trip      @relation(fields:[trip_id],references:[id],onDelete:Cascade)
+    payer        User      @relation(fields:[paid_by],references:[id])
+    splits       ExpenseSplit[]
+}
+
+model ExpenseSplit {
+  id          String   @id @default(uuid())
+  expense_id  String
+  user_id     String
+  amount_owed Decimal
+
+  expense     Expense  @relation(fields: [expense_id], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [user_id], references: [id])
+}
+
+
+// ADDITIONAL FEATURES ->
+
+model TripMedia {
+  id          String   @id @default(uuid())
+  trip_id     String
+  event_id    String?  // Nullable
+  uploaded_by String
+  file_url    String
+
+  trip        Trip            @relation(fields: [trip_id], references: [id], onDelete: Cascade)
+  event       ItineraryEvent? @relation(fields: [event_id], references: [id])
+  uploader    User            @relation(fields: [uploaded_by], references: [id])
+}
+
+model PackingList {
+  id                    String   @id @default(uuid())
+  trip_id               String
+  item_name             String
+  is_packed             Boolean  @default(false)
+  auto_generated_reason String?
+
+  trip                  Trip     @relation(fields: [trip_id], references: [id], onDelete: Cascade)
+}
+
+
+model Poll {
+  id         String       @id @default(uuid())
+  trip_id    String
+  created_by String
+  question   String
+  created_at DateTime     @default(now())
+
+  trip       Trip         @relation(fields: [trip_id], references: [id], onDelete: Cascade)
+  creator    User         @relation(fields: [created_by], references: [id])
+  options    PollOption[]
+  votes      Vote[]
+}
+
+model PollOption {
+  id          String   @id @default(uuid())
+  poll_id     String
+  option_text String
+
+  poll        Poll     @relation(fields: [poll_id], references: [id], onDelete: Cascade)
+  votes       Vote[]
+}
+
+model Vote {
+  poll_id   String
+  option_id String
+  user_id   String
+
+  poll      Poll       @relation(fields: [poll_id], references: [id], onDelete: Cascade)
+  option    PollOption @relation(fields: [option_id], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  // THE DATABASE FIREWALL: Enforces exactly ONE vote per user per poll
+  @@id([poll_id, user_id])
+}
+
+
+// ENUMS
+
+enum Role {
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+enum Intensity {
+  CHILL
+  MEDIUM
+  INTENSE
+}

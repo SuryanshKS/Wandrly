@@ -1,0 +1,49 @@
+import express from 'express';
+import { createTrip, getMyTrips, inviteMember, removeMember, updateRole } from '../controllers/tripController.js';
+import { protect } from '../middlewares/authMiddleware.js';
+import { addExpense, settleDebt } from '../controllers/expenseController.js';
+import { getTripSettlements } from '../controllers/settlementController.js';
+import { addEvent, editEvent, getEvents, removeEvent } from '../controllers/itenaryController.js';
+import { addItem, deleteItem, getItems, updateItem } from '../controllers/packingController.js';
+import { addPoll, getPolls, voteInPoll } from '../controllers/pollController.js';
+
+const router = express.Router();
+
+router.use(protect);//apply the protect middleware to all routes in this router, so that only authenticated users can access these routes
+
+// The user MUST pass through the 'protect' bouncer before reaching 'createTrip'
+// router.post('/', protect, createTrip);
+router.post('/', createTrip);//create a new trip, only for authenticated users
+router.get('/',getMyTrips);//GET /api/trips
+
+
+router.post('/:tripId/members', inviteMember);//POST /api/trips/:tripId/members
+router.put('/:tripId/members/role',updateRole);
+router.delete('/:tripId/members/:targetUserId',removeMember);
+
+//adding the expense routes here as all the expenses belong a trip only, hence it makes sense to keep them nested under the trip routes
+router.post('/:tripId/expenses', addExpense);//POST /api/trips/:tripId/expenses, only for authenticated users who are members of the trip (enforced in the controller/service)
+router.get('/:tripId/settlements', getTripSettlements);//GET /api/trips/:tripId/settlements, only for authenticated users who are members of the trip (enforced in the controller)
+router.post('/:tripId/settle',settleDebt);//POST /api/trips/:tripId/settle, only for authenticated users who are members of the trip (enforced in the controller)
+
+
+//adding the itenary routes here as well, since the itenary events also belong to a trip, it makes sense to keep them nested under the trip routes
+router.post('/:tripId/itenary',addEvent);//POST /api/trips/:tripId/itenary
+router.get('/:tripId/itenary',getEvents);//GET /api/trips/:tripId/itenary
+router.delete('/:tripId/itenary/:eventId',removeEvent);//DELETE /api/trips/:tripId/itenary/:eventId
+router.patch('/:tripId/itenary/:eventId',editEvent);//PATCH /api/trips/:tripId/itenary/:eventId
+
+
+
+//packing routes
+router.post('/:tripId/packing',addItem);//POST /api/trips/:tripId/packing
+router.get('/:tripId/packing',getItems);//GET /api/trips/:tripId/packing
+router.patch('/:tripId/packing/:itemId',updateItem);//PATCH /api/trips/:tripId/packing/:itemId
+router.delete('/:tripId/packing/:itemId', deleteItem);//DELETE /api/trips/:tripId/packing/:itemId
+
+//polling routes
+router.post('/:tripId/polls', addPoll);//POST /api/trips/:tripId/polls
+router.get('/:tripId/polls', getPolls);//GET /api/trips/:tripId/polls
+router.post('/:tripId/polls/:pollId/vote', voteInPoll);//POST /api/trips/:tripId/polls/:pollId/vote
+
+export default router;
