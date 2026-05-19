@@ -16,7 +16,7 @@ router.use(protect);//apply the protect middleware to all routes in this router,
 
 // The user MUST pass through the 'protect' bouncer before reaching 'createTrip'
 // router.post('/', protect, createTrip);
-router.post('/', createTrip);//create a new trip, only for authenticated users
+router.post('/',protect,uploadMiddleware.single('coverImage'), createTrip);//create a new trip, only for authenticated users
 router.get('/',getMyTrips);//GET /api/trips
 
 
