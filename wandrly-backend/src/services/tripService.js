@@ -21,7 +21,8 @@ export const createTripTransaction = async (userId, tripData) => {
                 // This is the critical part: we link the trip to the creator's user ID directly in the database, using Prisma's relation connect syntax. This ensures that the trip is securely associated with the authenticated user, and prevents any possibility of spoofing or creating trips under another user's account.
                 creator: {
                     connect: { id: userId } // This links the trip to the logged-in User ID!
-                }
+                },
+                cover_image:tripData.cover_image,
             }
         });
 

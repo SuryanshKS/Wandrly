@@ -39,6 +39,7 @@ model Trip{
   destination        String
   start_date         DateTime
   end_date           DateTime
+  cover_image        String?
   public_share_token String?    @unique // Nullable, generated when they click "Export Travelogue"
   
   created_by         String

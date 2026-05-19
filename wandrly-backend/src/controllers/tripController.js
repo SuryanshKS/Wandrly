@@ -3,22 +3,26 @@ import asyncHandler from "../utils/asyncHandler.js";
 
 
 //creating a trip
-export const createTrip = asyncHandler(async(req,res)=>{
-    const {title,destination,start_date,end_date} = req.body;
+export const createTrip = asyncHandler(async (req, res) => {
+    const { title, destination, start_date, end_date } = req.body;
 
     const userId = req.user.id;//get the authenticated user's ID from the auth middleware
 
-    if(!title || !start_date){
+    // Pull the secure URL uploaded by your Cloudinary-Multer middleware storage engine
+    const cover_image = req.file ? req.file.path : null;
+
+    if (!title || !start_date) {
         res.status(400);
         throw new Error("Trip title, start date are required.");
     }
 
     //send the extracted userid and trip data to the service layer, which will handle the transaction
-    const trip = await createTripTransaction(userId,{
+    const trip = await createTripTransaction(userId, {
         title,
         destination,
         start_date,
-        end_date
+        end_date,
+        cover_image
     });
 
     res.status(201).json({
@@ -28,23 +32,23 @@ export const createTrip = asyncHandler(async(req,res)=>{
 })
 
 
-export const inviteMember = asyncHandler(async(req,res)=>{
-    const {tripId} = req.params;
-    const {email,role} = req.body;
+export const inviteMember = asyncHandler(async (req, res) => {
+    const { tripId } = req.params;
+    const { email, role } = req.body;
     const adminId = req.user.id;//get the authenticated user's ID from the auth middleware
 
-    if(!email){
+    if (!email) {
         res.status(400);
         throw new Error("Member email is required.");
     }
 
-    try{
-        const membership = await addMemberToTrip(adminId, tripId,email,role);
+    try {
+        const membership = await addMemberToTrip(adminId, tripId, email, role);
         res.status(201).json({
             message: `User successfully onboarded as ${membership.role}!`,
             member: membership
         });
-    }catch(error){
+    } catch (error) {
         if (error.message === "NOT_AUTHORIZED_ADMIN") {
             res.status(403);
             throw new Error("Forbidden: Only the Trip Admin can invite members.");
@@ -61,9 +65,9 @@ export const inviteMember = asyncHandler(async(req,res)=>{
     }
 });
 
-export const updateRole = asyncHandler(async(req,res)=>{
-    const {tripId} = req.params;
-    const{targetUserId,newRole} = req.body;
+export const updateRole = asyncHandler(async (req, res) => {
+    const { tripId } = req.params;
+    const { targetUserId, newRole } = req.body;
     const adminId = req.user.id;//get the authenticated user's ID from the auth middleware
 
     if (!targetUserId || !newRole) {
@@ -94,19 +98,19 @@ export const updateRole = asyncHandler(async(req,res)=>{
     }
 });
 
-export const getMyTrips = asyncHandler(async(req,res)=>{
+export const getMyTrips = asyncHandler(async (req, res) => {
     const userId = req.user.id;//get the authenticated user's ID from the auth middleware
     const trips = await getUserTripsList(userId);
 
     res.status(200).json({
         status: "success",
-        results:trips.length,
+        results: trips.length,
         trips: trips
     });
 });
 
-export const removeMember = asyncHandler(async(req,res)=>{
-    const { tripId, targetUserId } = req.params; 
+export const removeMember = asyncHandler(async (req, res) => {
+    const { tripId, targetUserId } = req.params;
     const adminId = req.user.id;
     //pulling the targetUserId from the URL params instead of the body, since this is a DELETE request and we want to follow RESTful conventions. The URL would look like: DELETE /api/trips/:tripId/members/:targetUserId
 
@@ -115,7 +119,7 @@ export const removeMember = asyncHandler(async(req,res)=>{
         throw new Error("Target User ID is required in the URL.");
     }
 
-    try{
+    try {
         await removeMemberFromTrip(adminId, tripId, targetUserId);
 
         res.status(200).json({
