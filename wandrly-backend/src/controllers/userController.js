@@ -1,3 +1,4 @@
+import prisma from '../config/prisma.js';
 import { createUser,loginUser } from '../services/userService.js';
 import asyncHandler from '../utils/asyncHandler.js';
 
