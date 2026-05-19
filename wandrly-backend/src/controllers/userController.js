@@ -51,3 +51,31 @@ export const authUser = asyncHandler(async (req, res) => {
         throw error; // Let the global handler catch anything else
     }
 });
+
+
+export const getUserProfile = async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { 
+        id: req.user.id 
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        is_premium: true // FIXED: Using your exact snake_case schema name
+        // Removed the non-existent freeTripsCount field!
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    res.status(200).json(user);
+    
+  } catch (error) {
+    console.error("Error fetching user profile:", error);
+    res.status(500).json({ message: "Server error while fetching profile." });
+  }
+};
