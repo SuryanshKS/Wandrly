@@ -7,6 +7,8 @@ import { addEvent, editEvent, fillItenaryGaps, getEvents, removeEvent } from '..
 import { addItem, deleteItem, getItems, triggerAiPacking, updateItem } from '../controllers/packingController.js';
 import { addPoll, getPolls, voteInPoll } from '../controllers/pollController.js';
 import { getVibeCheck } from '../controllers/analyticsController.js';
+import { uploadMiddleware } from '../config/cloudinary.js';
+import { deleteMediaItem, getTravelogue, uploadMediaItem } from '../controllers/mediaController.js';
 
 const router = express.Router();
 
@@ -53,5 +55,10 @@ router.get('/:tripId/analytics/pacing',getVibeCheck);
 //ai automation routes
 router.post('/:tripId/packing/auto-generate',triggerAiPacking);//for packing list based on weather and events
 router.get('/:tripId/itenary/fill-gaps',fillItenaryGaps);//for fill-the-gap feature
+
+//media uploading and travelogue endpoints
+router.post('/:tripId/media/upload',uploadMiddleware.single('image'), uploadMediaItem);
+router.get('/:tripId/travelogue',getTravelogue);
+router.delete('/:tripId/media/:mediaId',deleteMediaItem);
 
 export default router;
