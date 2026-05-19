@@ -1,4 +1,5 @@
 import {v2 as cloudinary} from 'cloudinary';
+import {CloudinaryStorage} from 'multer-storage-cloudinary';
 import multer from 'multer';
 import dotenv from 'dotenv';
 
@@ -12,7 +13,15 @@ cloudinary.config({
 });
 
 //2. set up multer to use clean memory storage (no local files saved on disks)
-const storage = multer.memoryStorage();
+// const storage = multer.memoryStorage();
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'wandrly_covers', // The directory name inside your Cloudinary Media Library
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+    transformation: [{ width: 800, height: 500, crop: 'limit' }] // Optimizes image sizes automatically!
+  },
+});
 
 export const uploadMiddleware = multer({
     storage,
