@@ -18,6 +18,10 @@ import cors from 'cors';
 import userRoutes from './src/routes/userRoutes.js';
 import tripRoutes from './src/routes/tripRoutes.js';
 
+import paymentRoutes from './src/routes/paymentRoutes.js';
+import webhookRoutes from './src/routes/webhookRoutes.js';
+
+
 import { globalErrorHandler } from './src/middlewares/errorHandler.js';
 
 
@@ -37,7 +41,8 @@ const io = new Server(httpServer, {
     }
 });
 
-
+//Mounting the webhook first, before express.json() so it can process raw streams
+app.use('/api/webhooks',webhookRoutes);
 
 //MIDDLEWARE
 app.use(cors());//enable CORS for all routes, preventing cross-origin attacks
@@ -46,6 +51,8 @@ app.use(express.json());//parse incoming JSON requests and make the data availab
 //ROUTES
 app.use('/api/users', userRoutes);//mount user routes at /api/users
 app.use('/api/trips', tripRoutes);//mount trip routes at /api/trips
+
+app.use('/api/payments',paymentRoutes);//mount payment routes at api/payments
 
 app.get('/api/health', (req, res) => {
     res.status(200).json({ message: 'Server is healthy' });//respond with a JSON message indicating the server is healthy

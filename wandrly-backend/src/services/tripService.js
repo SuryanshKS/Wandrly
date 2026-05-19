@@ -1,6 +1,10 @@
 import prisma from "../config/prisma.js";
+import { validateTripCreationLimit } from "./paymentService.js";
 
 export const createTripTransaction = async (userId, tripData) => {
+
+    // FIREWALL ACTION: Intercepts call and throws an exception if free limits are exhausted
+    await validateTripCreationLimit(userId);
 
     const newTrip = await prisma.$transaction(async (tx) => {
         //1. create the trip itself

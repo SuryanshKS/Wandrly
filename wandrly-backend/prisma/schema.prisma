@@ -18,8 +18,9 @@ model User{
     name           String
     email          String     @unique
     password_hash  String
-    created_at     DateTime     @default(now())
+    created_at     DateTime   @default(now())
     upi_id         String?
+    is_premium     Boolean    @default(false)
 
     //relationships - used by prisma to understand connection b/w tables
     created_Trips  Trip[]     @relation("TripCreator")
