@@ -45,7 +45,10 @@ const io = new Server(httpServer, {
 app.use('/api/webhooks',webhookRoutes);
 
 //MIDDLEWARE
-app.use(cors());//enable CORS for all routes, preventing cross-origin attacks
+app.use(cors({
+    origin:'*',
+    credentials:true
+}));//enable CORS for all routes, preventing cross-origin attacks
 app.use(express.json());//parse incoming JSON requests and make the data available in req.body
 
 //ROUTES
