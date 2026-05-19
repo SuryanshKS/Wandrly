@@ -4,12 +4,23 @@ import asyncHandler from "../utils/asyncHandler.js";
 
 //creating a trip
 export const createTrip = asyncHandler(async (req, res) => {
+    // 1. DIAGNOSTIC LOGS: This will output exactly what is arriving at your server
+    console.log("--- TRIP CREATION ENGINE TRIGGERED ---");
+    console.log("BODY DATA:", req.body);
+    console.log("FILE DATA ARIVED:", req.file);
+
+
     const { title, destination, start_date, end_date } = req.body;
 
     const userId = req.user.id;//get the authenticated user's ID from the auth middleware
 
-    // Pull the secure URL uploaded by your Cloudinary-Multer middleware storage engine
-    const cover_image = req.file ? req.file.path : null;
+    // 2. BULLETPROOF URL EXTRACTOR: Checks path, secure_url, and standard url variants
+    let cover_image = null;
+    if (req.file) {
+        cover_image = req.file.path || req.file.secure_url || req.file.url || null;
+    }
+
+    console.log("RESOLVED URL FOR DB:", cover_image);
 
     if (!title || !start_date) {
         res.status(400);
