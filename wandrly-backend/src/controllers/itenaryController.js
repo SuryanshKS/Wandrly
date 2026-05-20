@@ -120,27 +120,25 @@ export const fillItenaryGaps = asyncHandler(async (req, res) => {
             res.status(403);
             throw new Error("Forbidden: You must be an active trip member to use the AI assistant.");
         }
-        if (error.message === "AI_GENERATION_FAILED") {
-            res.status(502);
-            throw new Error("Bad Gateway: The AI suggestions matrix failed to compile.");
-        }
 
-        // NEW: Catch Gemini 429 Rate Limits
-        if (error.message.includes("429") || error.status === 429) {
+        // 1. Catch Gemini 429 Rate Limits
+        if (error.message?.includes("429") || error.status === 429) {
             return res.status(429).json({
                 status: "error",
                 message: "AI Rate Limit Reached: You are moving too fast! Please wait about 40 seconds and try again."
             });
         }
 
-        // NEW: Catch Gemini 503 Overloads (just like we did for packing)
-        if (error.message.includes("503") || error.status === 503 || error.message.includes("GoogleGenerativeAI")) {
+        // 2. Catch Gemini 503 Overloads
+        if (error.message?.includes("503") || error.status === 503) {
             return res.status(503).json({
                 status: "error",
                 message: "The AI service is currently experiencing unusually high demand. Please wait a moment and try again."
             });
         }
 
-        throw error;
+        // 3. Generic Fallback
+        res.status(502);
+        throw new Error("Bad Gateway: The AI suggestions matrix failed to compile.");
     }
 });

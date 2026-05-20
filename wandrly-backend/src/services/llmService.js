@@ -9,13 +9,13 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
  * @param {string} userContext - The raw itinerary/weather data.
  */
 
-export const generativeStructuredAIResponse = async(systemPrompt,userContext)=>{
-    try{
+export const generativeStructuredAIResponse = async (systemPrompt, userContext) => {
+    try {
         //we use flash as its fast and handles JSON perfectly
         const model = genAI.getGenerativeModel({
-            model:"gemini-2.5-flash",
-            generationConfig:{
-                responseMimeType:"application/json",
+            model: "gemini-2.5-flash",
+            generationConfig: {
+                responseMimeType: "application/json",
             }
         });
 
@@ -28,7 +28,9 @@ export const generativeStructuredAIResponse = async(systemPrompt,userContext)=>{
         return JSON.parse(textResponse);
     }
     catch (error) {
-        console.error("🧠 LLM Generation Error:", error);
-        throw new Error("AI_GENERATION_FAILED");
+        console.error("LLM Generation Error:", error);
+
+        // Pass the real error up the chain so controllers can read 429/503 statuses
+        throw error;
     }
 };
