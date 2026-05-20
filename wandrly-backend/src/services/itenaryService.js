@@ -218,34 +218,43 @@ export const analyzeAndFillGaps = async (userId, tripId, targetDateStr) => {
     // 🚨 ADD THIS: Let's x-ray exactly what Gemini is returning!
     console.log("🤖 RAW AI RESPONSE:", JSON.stringify(aiData, null, 2));
 
-    // 7. Aggressively search for the array, regardless of how Gemini wraps it
-    const generatedArray = aiData?.new_events || aiData?.events || aiData?.gaps_analyzed || [];
+    // 7. Validate and Insert safely
+    let generatedArray = aiData?.new_events || aiData?.events || [];
 
-    if (Array.isArray(generatedArray) && generatedArray.length > 0) {
-        const eventsToCreate = generatedArray.map(event => ({
-            trip_id: tripId,
-            title: event.title || event.activity_title || "Suggested Activity",
-            start_time: new Date(event.start_time),
-            end_time: new Date(event.end_time),
-            intensity_level: event.intensity_level || "MEDIUM" // Fallback safety
-        }));
+    // Filter and map ONLY valid events using a reducer
+    const eventsToCreate = generatedArray.reduce((acc, event) => {
+        // Attempt to parse the dates
+        const start = new Date(event.start_time);
+        const end = new Date(event.end_time);
 
-        // Bulk insert the new events into PostgreSQL
-        try {
-            await prisma.itineraryEvent.createMany({
-                data: eventsToCreate
+        // Only add to the database array if the dates are mathematically valid
+        if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+            acc.push({
+                trip_id: tripId,
+                title: event.title || event.activity_title || "AI Suggested Activity",
+                start_time: start,
+                end_time: end,
+                intensity_level: event.intensity_level || "MEDIUM"
             });
-            console.log(`✅ Successfully saved ${eventsToCreate.length} events to database!`);
-        } catch (dbError) {
-            console.error("💥 PRISMA INSERTION ERROR:", dbError);
         }
-    } else {
-        console.log("⚠️ AI returned data, but couldn't find a valid events array inside it.");
+        return acc;
+    }, []);
+
+    // Bulk insert the new events into PostgreSQL
+    try {
+        if (eventsToCreate.length > 0) {
+            await prisma.itineraryEvent.createMany({ data: eventsToCreate });
+            console.log(`✅ Successfully saved ${eventsToCreate.length} events to database!`);
+        } else {
+            console.log("⚠️ AI didn't return valid timestamped events. Nothing saved.");
+        }
+    } catch (dbError) {
+        console.error("💥 PRISMA INSERTION ERROR:", dbError);
     }
 
     return {
         date: targetDateStr,
         total_gaps_found: detectedGaps.length,
-        inserted_events: Array.isArray(generatedArray) ? generatedArray.length : 0
+        inserted_events: eventsToCreate.length
     };
-}
+};
