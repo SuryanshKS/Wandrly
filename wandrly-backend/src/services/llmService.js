@@ -13,7 +13,7 @@ export const generativeStructuredAIResponse = async (systemPrompt, userContext) 
     try {
         //we use flash as its fast and handles JSON perfectly
         const model = genAI.getGenerativeModel({
-            model: "gemini-1.5-flash",
+            model: "gemini-2.0-flash",
             generationConfig: {
                 responseMimeType: "application/json",
             }
