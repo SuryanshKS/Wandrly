@@ -1,5 +1,5 @@
 import express from 'express';
-import { createTrip, getMyTrips, inviteMember, removeMember, updateRole } from '../controllers/tripController.js';
+import { createTrip, getMyTrips, getSingleTrip, inviteMember, removeMember, updateRole } from '../controllers/tripController.js';
 import { protect } from '../middlewares/authMiddleware.js';
 import { addExpense, settleDebt } from '../controllers/expenseController.js';
 import { getTripSettlements } from '../controllers/settlementController.js';
@@ -19,7 +19,6 @@ router.use(protect);//apply the protect middleware to all routes in this router,
 router.post('/',protect,uploadMiddleware.single('coverImage'), createTrip);//create a new trip, only for authenticated users
 router.get('/',getMyTrips);//GET /api/trips
 
-
 router.post('/:tripId/members', inviteMember);//POST /api/trips/:tripId/members
 router.put('/:tripId/members/role',updateRole);
 router.delete('/:tripId/members/:targetUserId',removeMember);
@@ -29,14 +28,11 @@ router.post('/:tripId/expenses', addExpense);//POST /api/trips/:tripId/expenses,
 router.get('/:tripId/settlements', getTripSettlements);//GET /api/trips/:tripId/settlements, only for authenticated users who are members of the trip (enforced in the controller)
 router.post('/:tripId/settle',settleDebt);//POST /api/trips/:tripId/settle, only for authenticated users who are members of the trip (enforced in the controller)
 
-
 //adding the itenary routes here as well, since the itenary events also belong to a trip, it makes sense to keep them nested under the trip routes
 router.post('/:tripId/itenary',addEvent);//POST /api/trips/:tripId/itenary
 router.get('/:tripId/itenary',getEvents);//GET /api/trips/:tripId/itenary
 router.delete('/:tripId/itenary/:eventId',removeEvent);//DELETE /api/trips/:tripId/itenary/:eventId
 router.patch('/:tripId/itenary/:eventId',editEvent);//PATCH /api/trips/:tripId/itenary/:eventId
-
-
 
 //packing routes
 router.post('/:tripId/packing',addItem);//POST /api/trips/:tripId/packing
@@ -60,5 +56,9 @@ router.get('/:tripId/itenary/fill-gaps',fillItenaryGaps);//for fill-the-gap feat
 router.post('/:tripId/media/upload',uploadMiddleware.single('image'), uploadMediaItem);
 router.get('/:tripId/travelogue',getTravelogue);
 router.delete('/:tripId/media/:mediaId',deleteMediaItem);
+
+
+//getting trip details from tripId
+router.get('/:tripId',protect,getSingleTrip);//GET /api/trips/:tripId
 
 export default router;

@@ -1,4 +1,4 @@
-import { addMemberToTrip, createTripTransaction, getUserTripsList, removeMemberFromTrip } from "../services/tripService.js";
+import { addMemberToTrip, createTripTransaction, getTripDetails, getUserTripsList, removeMemberFromTrip } from "../services/tripService.js";
 import asyncHandler from "../utils/asyncHandler.js";
 
 
@@ -152,4 +152,16 @@ export const removeMember = asyncHandler(async (req, res) => {
         }
         throw error;
     }
+})
+
+export const getSingleTrip = asyncHandler(async(req,res)=>{
+    const {tripId} = req.params;
+    const userId = req.user.id;
+
+    const trip = await getTripDetails(tripId,userId);
+
+    res.status(200).json({
+    status: "success",
+    data: trip
+  });
 })

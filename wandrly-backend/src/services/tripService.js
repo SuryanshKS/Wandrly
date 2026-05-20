@@ -22,7 +22,7 @@ export const createTripTransaction = async (userId, tripData) => {
                 creator: {
                     connect: { id: userId } // This links the trip to the logged-in User ID!
                 },
-                cover_image:tripData.cover_image,
+                cover_image: tripData.cover_image,
             }
         });
 
@@ -40,7 +40,6 @@ export const createTripTransaction = async (userId, tripData) => {
 
     return newTrip;
 }
-
 
 //1. onboard a friend onto the trip
 export const addMemberToTrip = async (adminId, tripId, memberEmail, requestedRole = 'VIEWER') => {
@@ -155,11 +154,11 @@ export const getUserTripsList = async (userId) => {
 
 
 //DELETING a user from a trip 
-export const removeMemberFromTrip = async(adminId,tripId,targetUserId)=>{
+export const removeMemberFromTrip = async (adminId, tripId, targetUserId) => {
     //A. check if requester is admin
     const adminCheck = await prisma.tripMember.findUnique({
-        where:{
-            trip_id_user_id:{
+        where: {
+            trip_id_user_id: {
                 trip_id: tripId,
                 user_id: adminId
             }
@@ -186,8 +185,8 @@ export const removeMemberFromTrip = async(adminId,tripId,targetUserId)=>{
 
     //D. delete the member record
     await prisma.tripMember.delete({
-        where:{
-            trip_id_user_id:{
+        where: {
+            trip_id_user_id: {
                 trip_id: tripId,
                 user_id: targetUserId
             }
@@ -195,4 +194,27 @@ export const removeMemberFromTrip = async(adminId,tripId,targetUserId)=>{
     });
 
     return true;//indicate success
+}
+
+
+//getting trip details from a tripId
+export const getTripDetails = async (tripId, userId) => {
+    const trip = await prisma.trip.findUnique({
+        where: { id: tripId },
+        include: {
+            members: true//include members to check permission
+        }
+    });
+
+    if (!trip) {
+        throw new Error("Trip not found");
+    }
+
+    //check user is a member of trip
+    const isMember = trip.members.some(m => m.user_id === userId);
+    if (!isMember) {
+        throw new Error("Unauthorized: You do not have access to this trip");
+    }
+
+    return trip;
 }
