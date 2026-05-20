@@ -215,27 +215,37 @@ export const analyzeAndFillGaps = async (userId, tripId, targetDateStr) => {
     //6. execute AI processing
     const aiData = await generativeStructuredAIResponse(systemPrompt, userContext);
 
-    // 7. FIXED: Actually save the AI suggestions to the database!
-    if (aiData && aiData.new_events && Array.isArray(aiData.new_events)) {
-        const eventsToCreate = aiData.new_events.map(event => ({
+    // 🚨 ADD THIS: Let's x-ray exactly what Gemini is returning!
+    console.log("🤖 RAW AI RESPONSE:", JSON.stringify(aiData, null, 2));
+
+    // 7. Aggressively search for the array, regardless of how Gemini wraps it
+    const generatedArray = aiData?.new_events || aiData?.events || aiData?.gaps_analyzed || [];
+
+    if (Array.isArray(generatedArray) && generatedArray.length > 0) {
+        const eventsToCreate = generatedArray.map(event => ({
             trip_id: tripId,
-            title: event.title,
+            title: event.title || event.activity_title || "Suggested Activity",
             start_time: new Date(event.start_time),
             end_time: new Date(event.end_time),
-            intensity_level: event.intensity_level
+            intensity_level: event.intensity_level || "MEDIUM" // Fallback safety
         }));
 
         // Bulk insert the new events into PostgreSQL
-        if (eventsToCreate.length > 0) {
+        try {
             await prisma.itineraryEvent.createMany({
                 data: eventsToCreate
             });
+            console.log(`✅ Successfully saved ${eventsToCreate.length} events to database!`);
+        } catch (dbError) {
+            console.error("💥 PRISMA INSERTION ERROR:", dbError);
         }
+    } else {
+        console.log("⚠️ AI returned data, but couldn't find a valid events array inside it.");
     }
 
     return {
         date: targetDateStr,
         total_gaps_found: detectedGaps.length,
-        inserted_events: aiData.new_events?.length || 0
+        inserted_events: Array.isArray(generatedArray) ? generatedArray.length : 0
     };
 }
