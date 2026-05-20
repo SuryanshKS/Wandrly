@@ -1,21 +1,21 @@
-import { addPackingItem, getPackingList, removePackingItem, updatePackingItem , generateSmartPackingList} from "../services/packingService.js";
+import { addPackingItem, getPackingList, removePackingItem, updatePackingItem, generateSmartPackingList } from "../services/packingService.js";
 import asyncHandler from "../utils/asyncHandler.js";
 
 
-export const addItem = asyncHandler(async(req,res)=>{
-    const {tripId} = req.params;
-    const {item_name} = req.body;
+export const addItem = asyncHandler(async (req, res) => {
+    const { tripId } = req.params;
+    const { item_name } = req.body;
     const userId = req.user.id;
 
-    if(!item_name){
+    if (!item_name) {
         res.status(400);
         throw new Error("Item name is required.");
     }
 
-    try{
-        const item = await addPackingItem(userId,tripId,item_name);
+    try {
+        const item = await addPackingItem(userId, tripId, item_name);
         res.status(201).json({ message: "Item added to packing list.", item });
-    }catch(error){
+    } catch (error) {
         if (error.message === "NOT_AUTHORIZED_LOGISTICS") {
             res.status(403);
             throw new Error("Forbidden: Viewers cannot modify the packing list.");
@@ -24,14 +24,14 @@ export const addItem = asyncHandler(async(req,res)=>{
     }
 });
 
-export const getItems = asyncHandler(async(req,res)=>{
-    const{tripId} = req.params;
+export const getItems = asyncHandler(async (req, res) => {
+    const { tripId } = req.params;
     const userId = req.user.id;
 
-    try{
-        const items = await getPackingList(userId,tripId);
+    try {
+        const items = await getPackingList(userId, tripId);
         res.status(200).json({ status: "success", count: items.length, items });
-    }catch (error) {
+    } catch (error) {
         if (error.message === "NOT_A_MEMBER") {
             res.status(403);
             throw new Error("Forbidden: Only trip members can view this list.");
@@ -40,9 +40,9 @@ export const getItems = asyncHandler(async(req,res)=>{
     }
 });
 
-export const updateItem = asyncHandler(async(req,res)=>{
-    const {tripId,itemId} = req.params;
-    const {is_packed, new_item_name} = req.body;
+export const updateItem = asyncHandler(async (req, res) => {
+    const { tripId, itemId } = req.params;
+    const { is_packed, new_item_name } = req.body;
     const userId = req.user.id;
 
     if (typeof is_packed !== 'boolean') {
@@ -50,13 +50,13 @@ export const updateItem = asyncHandler(async(req,res)=>{
         throw new Error("is_packed must be a boolean value.");
     }
 
-    try{
-        const updatedItem = await updatePackingItem(userId,tripId,itemId,is_packed,new_item_name);
+    try {
+        const updatedItem = await updatePackingItem(userId, tripId, itemId, is_packed, new_item_name);
         res.status(200).json({
-            message:"Item updated!",
-            item:updatedItem,
+            message: "Item updated!",
+            item: updatedItem,
         });
-    }catch (error) {
+    } catch (error) {
         if (error.message === "NOT_AUTHORIZED_LOGISTICS") {
             res.status(403);
             throw new Error("Forbidden: Viewers cannot check off items.");
@@ -69,16 +69,16 @@ export const updateItem = asyncHandler(async(req,res)=>{
     }
 });
 
-export const deleteItem = asyncHandler(async(req,res)=>{
-    const {tripId,itemId} = req.params;
+export const deleteItem = asyncHandler(async (req, res) => {
+    const { tripId, itemId } = req.params;
     const userId = req.user.id;
 
-    try{
-        await removePackingItem(userId,tripId,itemId);
+    try {
+        await removePackingItem(userId, tripId, itemId);
         res.status(200).json({
-            message:"Item deleted successfully!",
+            message: "Item deleted successfully!",
         })
-    }catch (error) {
+    } catch (error) {
         if (error.message === "NOT_AUTHORIZED_LOGISTICS") {
             res.status(403);
             throw new Error("Forbidden: Viewers cannot delete items.");
@@ -89,18 +89,18 @@ export const deleteItem = asyncHandler(async(req,res)=>{
 
 
 
-export const triggerAiPacking = asyncHandler(async(req,res)=>{
-    const {tripId} = req.params;
+export const triggerAiPacking = asyncHandler(async (req, res) => {
+    const { tripId } = req.params;
     const userId = req.user.id;
 
-    try{
-        const items = await generateSmartPackingList(userId,tripId);
-        res.status(201).json({ 
-            status: "success", 
-            message: `Successfully generated and inserted ${items.length} AI-recommended items.`, 
-            items 
+    try {
+        const items = await generateSmartPackingList(userId, tripId);
+        res.status(201).json({
+            status: "success",
+            message: `Successfully generated and inserted ${items.length} AI-recommended items.`,
+            items
         });
-    }catch (error) {
+    } catch (error) {
         if (error.message === "NOT_AUTHORIZED_LOGISTICS") {
             res.status(403);
             throw new Error("Forbidden: Viewers cannot trigger AI automation layers.");
@@ -113,6 +113,15 @@ export const triggerAiPacking = asyncHandler(async(req,res)=>{
             res.status(502);
             throw new Error("Bad Gateway: The AI engine failed to return a valid structured payload.");
         }
+
+        // FIXED: Catch external Google API Overload / 503 errors dynamically
+        if (error.message.includes("503") || error.status === 503 || error.message.includes("GoogleGenerativeAI")) {
+            return res.status(503).json({
+                status: "error",
+                message: "The AI service is currently experiencing unusually high demand. Please wait a moment and try again."
+            });
+        }
+
         throw error;
     }
 })
