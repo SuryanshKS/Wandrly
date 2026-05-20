@@ -76,6 +76,7 @@ model ItineraryEvent {
   lat             Decimal? // For the geospatial "Fill the Gap" feature
   lng             Decimal?
   intensity_level Intensity @default(MEDIUM) // For the "Vibe Check" feature
+  description     String?
 
   trip            Trip      @relation(fields: [trip_id], references: [id], onDelete: Cascade)
   media           TripMedia[]

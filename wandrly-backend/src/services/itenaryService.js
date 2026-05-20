@@ -178,14 +178,14 @@ export const analyzeAndFillGaps = async (userId, tripId, targetDateStr) => {
         return { message: "Your schedule is perfectly optimized! No gaps detected.", suggestions: [] };
     }
 
-    // 5. construct contextual AI prompt (ALIGNED WITH SCHEMA)
+    // 5. construct contextual AI prompt
     const systemPrompt = `
-  You are Wandrly's Geospatial Travel Assistant. Look at the empty gaps of time between a group's planned travel activities and suggest ONE highly-rated activity to fill each gap.
+  You are Wandrly's Geospatial Travel Assistant. Look at the empty gaps of time between a group's planned travel activities.
   
   CRITICAL RULES:
-  1. Recommendations MUST be physically close to the origin/destination provided.
-  2. Suggest quick, easy things: a cafe, a scenic viewpoint, or a park.
-  3. You MUST provide valid ISO 8601 timestamps for start_time and end_time.
+  1. PROPORTIONAL SUGGESTIONS: Calculate the duration of the gap. If it's a 2-hour gap, suggest 1 event. If it's a 10-hour gap, suggest 3-4 distinct events spaced logically throughout the day. Similarly, determine the no. of events you suggest based on the gap durations, if there are multiple gaps, treat each gap as one time_frame and suggest the no. of events for that particular time frame, ex if there are 2 gaps of 2 hours and 6 hours, then in first gap suggest 1 1 hour event, in second suggest 2 2 hours events or 4 1 hour events.
+  2. BE SPECIFIC: Do NOT suggest generic places (e.g., "Downtown Cafe"). Suggest REAL, specific, highly-rated businesses, restaurants, or landmarks in that exact geographic area. You can search online and refer to search results from sites like reddit for real user experiences at those places.
+  3. You MUST provide valid ISO 8601 timestamps for start_time and end_time. Leave breathing room (30-60 mins) between multiple events.
   4. intensity_level must be "CHILL", "MEDIUM", or "INTENSE".
 
   EXACT JSON OUTPUT FORMAT REQUIRED:
@@ -195,12 +195,12 @@ export const analyzeAndFillGaps = async (userId, tripId, targetDateStr) => {
         "time_window": "9:00 AM - 8:00 PM",
         "recommendations": [
           {
-            "activity_title": "Visit Local Cafe",
+            "activity_title": "Breakfast at Blue Tokai Coffee Roasters",
             "type": "Cafe",
-            "description": "A great place to relax.",
+            "description": "Start your morning with artisanal coffee and fresh croissants at this top-rated local roastery.",
             "estimated_duration": "1 hour",
-            "start_time": "2026-05-20T10:00:00.000Z",
-            "end_time": "2026-05-20T11:00:00.000Z",
+            "start_time": "2026-05-20T09:30:00.000Z",
+            "end_time": "2026-05-20T10:30:00.000Z",
             "intensity_level": "CHILL"
           }
         ]
@@ -235,6 +235,7 @@ export const analyzeAndFillGaps = async (userId, tripId, targetDateStr) => {
                         eventsToCreate.push({
                             trip_id: tripId,
                             title: rec.activity_title || "AI Suggested Activity",
+                            description: rec.description || null,
                             start_time: start,
                             end_time: end,
                             intensity_level: rec.intensity_level || "MEDIUM"
