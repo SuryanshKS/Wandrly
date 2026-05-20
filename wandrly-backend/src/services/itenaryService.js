@@ -213,10 +213,29 @@ export const analyzeAndFillGaps = async (userId, tripId, targetDateStr) => {
     `;
 
     //6. execute AI processing
-    const aiSuggestions = await generativeStructuredAIResponse(systemPrompt,userContext);
+    const aiSuggestions = await generativeStructuredAIResponse(systemPrompt, userContext);
+
+    // 7. FIXED: Actually save the AI suggestions to the database!
+    if (aiData && aiData.new_events && Array.isArray(aiData.new_events)) {
+        const eventsToCreate = aiData.new_events.map(event => ({
+            trip_id: tripId,
+            title: event.title,
+            start_time: new Date(event.start_time),
+            end_time: new Date(event.end_time),
+            intensity_level: event.intensity_level
+        }));
+
+        // Bulk insert the new events into PostgreSQL
+        if (eventsToCreate.length > 0) {
+            await prisma.itineraryEvent.createMany({
+                data: eventsToCreate
+            });
+        }
+    }
+
     return {
         date: targetDateStr,
         total_gaps_found: detectedGaps.length,
-        ...aiSuggestions
+        inserted_events: aiData.new_events?.length || 0
     };
 }
