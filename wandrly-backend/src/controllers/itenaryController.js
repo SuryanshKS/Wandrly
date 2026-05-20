@@ -116,6 +116,8 @@ export const fillItenaryGaps = asyncHandler(async (req, res) => {
         const structuralGaps = await analyzeAndFillGaps(userId, tripId, date);
         res.status(200).json({ status: "success", data: structuralGaps });
     } catch (error) {
+        console.error("💥 RAW FILL GAPS ERROR:", error);
+        
         if (error.message === "NOT_A_MEMBER") {
             res.status(403);
             throw new Error("Forbidden: You must be an active trip member to use the AI assistant.");
