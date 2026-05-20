@@ -213,7 +213,7 @@ export const analyzeAndFillGaps = async (userId, tripId, targetDateStr) => {
     `;
 
     //6. execute AI processing
-    const aiSuggestions = await generativeStructuredAIResponse(systemPrompt, userContext);
+    const aiData = await generativeStructuredAIResponse(systemPrompt, userContext);
 
     // 7. FIXED: Actually save the AI suggestions to the database!
     if (aiData && aiData.new_events && Array.isArray(aiData.new_events)) {
