@@ -178,67 +178,72 @@ export const analyzeAndFillGaps = async (userId, tripId, targetDateStr) => {
         return { message: "Your schedule is perfectly optimized! No gaps detected.", suggestions: [] };
     }
 
-    //5. contstruct contextual AI prompt
+    // 5. construct contextual AI prompt (ALIGNED WITH SCHEMA)
     const systemPrompt = `
-        You are Wandrly's Geospatial Travel Assistant. Your job is to look at empty gaps of time between a group's planned travel activities and suggest 2-3 highly specific, low-commitment activities to fill that gap.
-        
-        CRITICAL RULES:
-        1. Recommendations MUST be physically close to the coordinate boundaries provided.
-        2. Suggest quick, easy things: a highly-rated local coffee shop, a nearby scenic viewpoint, a park, or a quick museum walk. Avoid suggesting major excursions that take half a day.
-        3. You must output exactly a JSON object matching the required format. Do not add markdown wrapping.
-        
-        EXACT JSON OUTPUT FORMAT REQUIRED:
-        {
-            "gaps_analyzed": [
-                {
-                    "time_window": "11:00 AM - 2:00 PM",
-                    "recommendations": [
-                        {
-                            "activity_title": "Cafe Name or Spot Name",
-                            "type": "Cafe / Viewpoint / Park / Quick Stop",
-                            "description": "Short description of why this is a perfect stopover between Activity A and Activity B.",
-                            "estimated_duration": "45 mins"
-                        }
-                    ]
-                }
-            ]
-        }
-    `;
+  You are Wandrly's Geospatial Travel Assistant. Look at the empty gaps of time between a group's planned travel activities and suggest ONE highly-rated activity to fill each gap.
+  
+  CRITICAL RULES:
+  1. Recommendations MUST be physically close to the origin/destination provided.
+  2. Suggest quick, easy things: a cafe, a scenic viewpoint, or a park.
+  3. You MUST provide valid ISO 8601 timestamps for start_time and end_time.
+  4. intensity_level must be "CHILL", "MEDIUM", or "INTENSE".
 
+  EXACT JSON OUTPUT FORMAT REQUIRED:
+  {
+    "gaps_analyzed": [
+      {
+        "time_window": "9:00 AM - 8:00 PM",
+        "recommendations": [
+          {
+            "activity_title": "Visit Local Cafe",
+            "type": "Cafe",
+            "description": "A great place to relax.",
+            "estimated_duration": "1 hour",
+            "start_time": "2026-05-20T10:00:00.000Z",
+            "end_time": "2026-05-20T11:00:00.000Z",
+            "intensity_level": "CHILL"
+          }
+        ]
+      }
+    ]
+  }
+  `;
 
     const userContext = `
-        Target Date Analyzed: ${targetDateStr}
-        Identified Timeline Gaps:
-        ${JSON.stringify(detectedGaps, null, 2)}
-    `;
+  Target Date Analyzed: ${targetDateStr}
+  Identified Timeline Gaps:
+  ${JSON.stringify(detectedGaps, null, 2)}
+  `;
 
-    //6. execute AI processing
+    // 6. execute AI processing
     const aiData = await generativeStructuredAIResponse(systemPrompt, userContext);
-
-    // 🚨 ADD THIS: Let's x-ray exactly what Gemini is returning!
     console.log("🤖 RAW AI RESPONSE:", JSON.stringify(aiData, null, 2));
 
-    // 7. Validate and Insert safely
-    let generatedArray = aiData?.new_events || aiData?.events || [];
+    // 7. Safely extract nested recommendations from the AI's preferred format
+    let eventsToCreate = [];
 
-    // Filter and map ONLY valid events using a reducer
-    const eventsToCreate = generatedArray.reduce((acc, event) => {
-        // Attempt to parse the dates
-        const start = new Date(event.start_time);
-        const end = new Date(event.end_time);
+    if (aiData && Array.isArray(aiData.gaps_analyzed)) {
+        aiData.gaps_analyzed.forEach(gap => {
+            if (Array.isArray(gap.recommendations)) {
+                gap.recommendations.forEach(rec => {
+                    // Attempt to parse the AI's dates
+                    const start = new Date(rec.start_time);
+                    const end = new Date(rec.end_time);
 
-        // Only add to the database array if the dates are mathematically valid
-        if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
-            acc.push({
-                trip_id: tripId,
-                title: event.title || event.activity_title || "AI Suggested Activity",
-                start_time: start,
-                end_time: end,
-                intensity_level: event.intensity_level || "MEDIUM"
-            });
-        }
-        return acc;
-    }, []);
+                    // Only add to the DB array if dates are valid
+                    if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+                        eventsToCreate.push({
+                            trip_id: tripId,
+                            title: rec.activity_title || "AI Suggested Activity",
+                            start_time: start,
+                            end_time: end,
+                            intensity_level: rec.intensity_level || "MEDIUM"
+                        });
+                    }
+                });
+            }
+        });
+    }
 
     // Bulk insert the new events into PostgreSQL
     try {
@@ -246,7 +251,7 @@ export const analyzeAndFillGaps = async (userId, tripId, targetDateStr) => {
             await prisma.itineraryEvent.createMany({ data: eventsToCreate });
             console.log(`✅ Successfully saved ${eventsToCreate.length} events to database!`);
         } else {
-            console.log("⚠️ AI didn't return valid timestamped events. Nothing saved.");
+            console.log("⚠️ AI returned empty recommendations. Nothing saved.");
         }
     } catch (dbError) {
         console.error("💥 PRISMA INSERTION ERROR:", dbError);
