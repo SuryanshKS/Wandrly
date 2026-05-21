@@ -28,6 +28,7 @@ export const uploadMediaItem = asyncHandler(async (req, res) => {
             data: {
                 trip_id: tripId,
                 file_url: cloudinaryUrl,
+                uploaded_by: req.user.id
             }
         });
 
