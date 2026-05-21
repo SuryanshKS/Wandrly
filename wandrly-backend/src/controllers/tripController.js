@@ -1,3 +1,4 @@
+import prisma from "../config/prisma.js";
 import { addMemberToTrip, createTripTransaction, getTripDetails, getUserTripsList, removeMemberFromTrip } from "../services/tripService.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { getCoordinates } from "../utils/geocoder.js";
