@@ -34,7 +34,6 @@ export const compileChronologicalTravelogue = async(userId,tripId) => {
     return await prisma.itineraryEvent.findMany({
         where:{
             trip_id:tripId,
-            NOT:{lat:null, lng:null}
         },
         include:{
             media:{
