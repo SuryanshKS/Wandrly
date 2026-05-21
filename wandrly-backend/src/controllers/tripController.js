@@ -1,5 +1,5 @@
 import prisma from "../config/prisma.js";
-import { addMemberToTrip, createTripTransaction, getTripDetails, getUserTripsList, removeMemberFromTrip } from "../services/tripService.js";
+import { addMemberToTrip, changeMemberRole, createTripTransaction, getTripDetails, getUserTripsList, removeMemberFromTrip } from "../services/tripService.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { getCoordinates } from "../utils/geocoder.js";
 
@@ -49,7 +49,6 @@ export const createTrip = asyncHandler(async (req, res) => {
         trip: trip
     });
 })
-
 
 export const inviteMember = asyncHandler(async (req, res) => {
     const { tripId } = req.params;
