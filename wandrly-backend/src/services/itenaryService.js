@@ -124,6 +124,13 @@ export const analyzeAndFillGaps = async (userId, tripId, targetDateStr) => {
     });
     if (!member) throw new Error("NOT_A_MEMBER");
 
+    // 1.5 Fetch Trip Destination Context
+    const tripContext = await prisma.trip.findUnique({
+        where: { id: tripId },
+        select: { destination: true }
+    });
+    const destination = tripContext?.destination || "the specified travel destination";
+
     //2. parse target date boundaries
     const startOfDay = new Date(`${targetDateStr}T00:00:00.000Z`);
     const endOfDay = new Date(`${targetDateStr}T23:59:59.999Z`);
@@ -180,11 +187,12 @@ export const analyzeAndFillGaps = async (userId, tripId, targetDateStr) => {
 
     // 5. construct contextual AI prompt
     const systemPrompt = `
-  You are Wandrly's Geospatial Travel Assistant. Look at the empty gaps of time between a group's planned travel activities.
+  You are Wandrly's Geospatial Travel Assistant. Your exact current location is: **${destination}**.
+  Look at the empty gaps of time between a group's planned travel activities.
   
   CRITICAL RULES:
   1. PROPORTIONAL SUGGESTIONS: Calculate the duration of the gap. If it's a 2-hour gap, suggest 1 event. If it's a 10-hour gap, suggest 3-4 distinct events spaced logically throughout the day. Similarly, determine the no. of events you suggest based on the gap durations, if there are multiple gaps, treat each gap as one time_frame and suggest the no. of events for that particular time frame, ex if there are 2 gaps of 2 hours and 6 hours, then in first gap suggest 1 1 hour event, in second suggest 2 2 hours events or 4 1 hour events.
-  2. BE SPECIFIC: Do NOT suggest generic places (e.g., "Downtown Cafe"). Suggest REAL, specific, highly-rated businesses, restaurants, or landmarks in that exact geographic area. You can search online and refer to search results from sites like reddit for real user experiences at those places.
+  2. BE SPECIFIC: Do NOT suggest generic places (e.g., "Downtown Cafe"). Suggest REAL, specific, highly-rated businesses, restaurants, or landmarks for ${destination}. You can search online and refer to search results from sites like reddit for real user experiences at those places. Make sure to keep these suggested events nearby from the previous event or current location.
   3. You MUST provide valid ISO 8601 timestamps for start_time and end_time. Leave breathing room (30-60 mins) between multiple events.
   4. intensity_level must be "CHILL", "MEDIUM", or "INTENSE".
 
