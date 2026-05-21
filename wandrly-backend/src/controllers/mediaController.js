@@ -4,30 +4,52 @@ import asyncHandler from "../utils/asyncHandler.js";
 
 export const uploadMediaItem = asyncHandler(async (req, res) => {
     // 🔥 TRIPWIRES: What did Multer actually catch?
-    console.log("🔥 MULTER FILE:", req.file);
-    console.log("🔥 REQUEST BODY:", req.body);
+    // console.log("🔥 MULTER FILE:", req.file); this showed that multer succesfully intercepted image and uploaded it to cloudinary, the multer-storage-cloudinary middleware  automatically uploaded image, before even the controller runs and provides the URL inside req.file.path, but our fxn tries to take req.file and upload it again, it expects a buffer but gets URL hence cloudinary gets confused and throws error on this URL instead of getting buffer
+    // console.log("🔥 REQUEST BODY:", req.body);
     const { tripId } = req.params;
-    const { event_id } = req.body;
-    const userId = req.user.id;
+    // const { event_id } = req.body;
+    // const userId = req.user.id;
 
-    if (!req.file) {
-        res.status(400);
-        throw new Error("No file uploaded.");
-    }
+    // if (!req.file) {
+    //     res.status(400);
+    //     throw new Error("No file uploaded.");
+    // }
 
     try {
-        const mediaRecord = await processMediaUpload(userId, tripId, event_id, req.file.buffer);
-        res.status(201).json({
-            status: "success",
-            message: "Memory uploaded and securely linked to coordinates.",
-            mediaRecord
-        });
-    } catch (error) {
-        if (error.message === "NOT_AUTHORIZED_MEDIA") {
-            res.status(403);
-            throw new Error("Forbidden: Viewers are restricted from contributing media.");
+        // 1. Safety check
+        if (!req.file) {
+            return res.status(400).json({ message: "No image file detected." });
         }
-        throw error;
+        // 2. Extract the URL that Multer already generated!
+        const cloudinaryUrl = req.file.path;
+        // 3. Save directly to your database (Make sure this matches your Prisma model name!)
+        const newMedia = await prisma.tripMedia.create({
+            data: {
+                trip_id: tripId,
+                file_url: cloudinaryUrl,
+            }
+        });
+
+        // 4. Send the new database record back to the React frontend
+        return res.status(201).json({
+            status: "success",
+            data: newMedia
+        });
+        // const mediaRecord = await processMediaUpload(userId, tripId, event_id, req.file.buffer);
+        // res.status(201).json({
+        //     status: "success",
+        //     message: "Memory uploaded and securely linked to coordinates.",
+        //     mediaRecord
+        // });
+    } catch (error) {
+        // if (error.message === "NOT_AUTHORIZED_MEDIA") {
+        //     res.status(403);
+        //     throw new Error("Forbidden: Viewers are restricted from contributing media.");
+        // }
+        // throw error;
+
+        console.error("🔥 MEDIA CONTROLLER ERROR:", error);
+        return res.status(500).json({ message: "Failed to save media to database." });
     }
 });
 
