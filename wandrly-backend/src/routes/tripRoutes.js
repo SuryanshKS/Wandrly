@@ -50,7 +50,8 @@ router.get('/:tripId/analytics/pacing',getVibeCheck);
 
 //ai automation routes
 router.post('/:tripId/packing/auto-generate',triggerAiPacking);//for packing list based on weather and events
-router.get('/:tripId/itenary/fill-gaps',fillItenaryGaps);//for fill-the-gap feature
+// router.get('/:tripId/itenary/fill-gaps',fillItenaryGaps);//for fill-the-gap feature
+router.post('/:tripId/itenary/fill-gaps', fillItenaryGaps);
 
 //media uploading and travelogue endpoints
 router.post('/:tripId/media/upload',uploadMiddleware.single('image'), uploadMediaItem);
