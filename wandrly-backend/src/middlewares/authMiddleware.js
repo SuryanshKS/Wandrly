@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import asyncHandler from '../utils/asyncHandler.js';
 import prisma from '../config/prisma.js';
 
-export const protect = asyncHandler(async (req,resizeBy,next)=>{
+export const protect = asyncHandler(async (req,res,next)=>{
     let token;
 
     //1. check if token exists in the Authorization header, and if it starts with "Bearer"
