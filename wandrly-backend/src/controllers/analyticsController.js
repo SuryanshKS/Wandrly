@@ -1,3 +1,4 @@
+import prisma from "../config/prisma.js";
 import { getPacingAnalytics } from "../services/analyticsService.js";
 import asyncHandler from "../utils/asyncHandler.js";
 

@@ -14,23 +14,6 @@ import prisma from '../config/prisma.js';
 
 const router = express.Router();
 
-// TEMPORARY: Backfill route
-router.get('/admin/backfill-coordinates', async (req, res) => {
-  try {
-    const trips = await prisma.trip.findMany({ where: { lat: null } });
-    for (const trip of trips) {
-      const { lat, lng } = await getCoordinates(trip.destination);
-      await prisma.trip.update({
-        where: { id: trip.id },
-        data: { lat, lng }
-      });
-    }
-    res.status(200).json({ message: `Successfully updated ${trips.length} trips.` });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 router.use(protect);//apply the protect middleware to all routes in this router, so that only authenticated users can access these routes
 
 // The user MUST pass through the 'protect' bouncer before reaching 'createTrip'
