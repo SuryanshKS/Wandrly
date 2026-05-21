@@ -14,33 +14,33 @@ import prisma from '../config/prisma.js';
 
 const router = express.Router();
 
-// TEMPORARY: Backfill route
-router.get('/admin/backfill-coordinates', async (req, res) => {
-    try {
-        // Add this logic before your loop
-        await prisma.trip.updateMany({
-            where: { lat: 0, lng: 0 },
-            data: { lat: null, lng: null }
-        });
-        const trips = await prisma.trip.findMany({ where: { lat: null } });
-        // Inside your backfill loop:
-        for (const trip of trips) {
-            const coords = await getCoordinates(trip.destination);
+// // TEMPORARY: Backfill route
+// router.get('/admin/backfill-coordinates', async (req, res) => {
+//     try {
+//         // Add this logic before your loop
+//         await prisma.trip.updateMany({
+//             where: { lat: 0, lng: 0 },
+//             data: { lat: null, lng: null }
+//         });
+//         const trips = await prisma.trip.findMany({ where: { lat: null } });
+//         // Inside your backfill loop:
+//         for (const trip of trips) {
+//             const coords = await getCoordinates(trip.destination);
 
-            if (coords) { // Only update if we actually got a result
-                await prisma.trip.update({
-                    where: { id: trip.id },
-                    data: { lat: coords.lat, lng: coords.lng }
-                });
-            } else {
-                console.log(`Skipping trip ${trip.title}: Could not find coordinates.`);
-            }
-        }
-        res.status(200).json({ message: `Successfully updated ${trips.length} trips.` });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
+//             if (coords) { // Only update if we actually got a result
+//                 await prisma.trip.update({
+//                     where: { id: trip.id },
+//                     data: { lat: coords.lat, lng: coords.lng }
+//                 });
+//             } else {
+//                 console.log(`Skipping trip ${trip.title}: Could not find coordinates.`);
+//             }
+//         }
+//         res.status(200).json({ message: `Successfully updated ${trips.length} trips.` });
+//     } catch (err) {
+//         res.status(500).json({ error: err.message });
+//     }
+// });
 
 router.use(protect);//apply the protect middleware to all routes in this router, so that only authenticated users can access these routes
 
