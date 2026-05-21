@@ -9,6 +9,8 @@ import { addPoll, getPolls, voteInPoll } from '../controllers/pollController.js'
 import { getGlobalMapData, getVibeCheck } from '../controllers/analyticsController.js';
 import { uploadMiddleware } from '../config/cloudinary.js';
 import { deleteMediaItem, getTravelogue, uploadMediaItem, getTripGallery, assignMediaToEvent } from '../controllers/mediaController.js';
+import { getCoordinates } from '../utils/geocoder.js';
+import prisma from '../config/prisma.js';
 
 const router = express.Router();
 
