@@ -20,3 +20,19 @@ export const getVibeCheck = asyncHandler(async(req,res)=>{
         throw error;
     }
 });
+
+export const getGlobalMapData = async (req, res) => {
+  const userId = req.user.id;
+  
+  const trips = await prisma.trip.findMany({
+    where: { members: { some: { user_id: userId } } },
+    select: { 
+      id: true, 
+      title: true, 
+      lat: true, 
+      lng: true 
+    }
+  });
+
+  res.status(200).json({ status: "success", data: trips });
+};
