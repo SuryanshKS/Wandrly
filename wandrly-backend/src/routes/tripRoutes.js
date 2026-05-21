@@ -8,7 +8,7 @@ import { addItem, deleteItem, getItems, triggerAiPacking, updateItem } from '../
 import { addPoll, getPolls, voteInPoll } from '../controllers/pollController.js';
 import { getVibeCheck } from '../controllers/analyticsController.js';
 import { uploadMiddleware } from '../config/cloudinary.js';
-import { deleteMediaItem, getTravelogue, uploadMediaItem } from '../controllers/mediaController.js';
+import { deleteMediaItem, getTravelogue, uploadMediaItem , getTripGallery} from '../controllers/mediaController.js';
 
 const router = express.Router();
 
@@ -56,6 +56,7 @@ router.post('/:tripId/itenary/fill-gaps', fillItenaryGaps);
 //media uploading and travelogue endpoints
 router.post('/:tripId/media/upload',uploadMiddleware.single('image'), uploadMediaItem);
 router.get('/:tripId/travelogue',getTravelogue);
+router.get('/:tripId/gallery', getTripGallery); // NEW: For our Masonry UI
 router.delete('/:tripId/media/:mediaId',deleteMediaItem);
 
 

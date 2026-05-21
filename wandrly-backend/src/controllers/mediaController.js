@@ -94,3 +94,28 @@ export const deleteMediaItem = asyncHandler(async (req, res) => {
         throw error;
     }
 })
+
+// NEW: Dedicated flat-fetch for the Masonry Gallery UI
+export const getTripGallery = async (req, res) => {
+  const { tripId } = req.params;
+
+  try {
+    const media = await prisma.tripMedia.findMany({
+      where: { 
+        trip_id: tripId 
+      },
+      orderBy: {
+        id: 'desc' // Shows newest uploads first at the top of the gallery
+      }
+    });
+
+    res.status(200).json({ 
+      status: "success", 
+      data: media 
+    });
+
+  } catch (error) {
+    console.error("🔥 GET GALLERY ERROR:", error);
+    res.status(500).json({ message: "Failed to fetch gallery." });
+  }
+};
