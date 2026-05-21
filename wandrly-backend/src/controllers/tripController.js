@@ -173,3 +173,22 @@ export const getSingleTrip = asyncHandler(async (req, res) => {
     });
 })
 
+// Fetch all members of a specific trip
+export const getTripMembers = asyncHandler(async (req, res) => {
+    const { tripId } = req.params;
+
+    // Fetch members and join the user table to get names/emails
+    const members = await prisma.tripMember.findMany({
+        where: { trip_id: tripId },
+        include: {
+            user: { 
+                select: { id: true, name: true, email: true } 
+            }
+        }
+    });
+
+    res.status(200).json({
+        status: "success",
+        members: members
+    });
+});

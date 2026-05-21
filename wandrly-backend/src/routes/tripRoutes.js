@@ -52,6 +52,8 @@ router.get('/', getMyTrips);//GET /api/trips
 // Analytics - Global Map
 router.get('/analytics/global-map', protect, getGlobalMapData);
 
+
+router.get('/:tripId/members', getTripMembers);
 router.post('/:tripId/members', inviteMember);//POST /api/trips/:tripId/members
 router.put('/:tripId/members/role', updateRole);
 router.delete('/:tripId/members/:targetUserId', removeMember);
