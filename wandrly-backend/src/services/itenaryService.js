@@ -152,31 +152,44 @@ export const analyzeAndFillGaps = async (userId, tripId, targetDateStr) => {
     //4. gap detection
     const detectedGaps = [];
 
-    for (let i = 0; i < events.length - 1; i++) {
-        const currEvent = events[i];
-        const nextEvent = events[i + 1];
+    // ADD THIS MISSING BLOCK: If the day is completely empty, give the AI a wide open canvas!
+    if (events.length === 0) {
+        detectedGaps.push({
+            gap_start: `${targetDateStr}T09:00:00.000Z`,
+            gap_end: `${targetDateStr}T20:00:00.000Z`,
+            duration_hours: 11,
+            origin_location: { title: "Morning Start (9:00 AM)" },
+            destination_location: { title: "Evening End (8:00 PM)" }
+        });
+    }
 
-        const gapInMilliseconds = nextEvent.start_time.getTime() - currEvent.end_time.getTime();
+    else {
+        for (let i = 0; i < events.length - 1; i++) {
+            const currEvent = events[i];
+            const nextEvent = events[i + 1];
 
-        const gapInHours = gapInMilliseconds / (1000 * 60 * 60);
+            const gapInMilliseconds = nextEvent.start_time.getTime() - currEvent.end_time.getTime();
 
-        //if more than 1 hr, flag it for LLM
-        if (gapInHours >= 1.0) {
-            detectedGaps.push({
-                gap_start: currEvent.end_time.toISOString(),
-                gap_end: nextEvent.start_time.toISOString(),
-                duration_hours: gapInHours.toFixed(1),
-                origin_location: {
-                    title: currEvent.title,
-                    lat: currEvent.lat ? parseFloat(currEvent.lat) : null,
-                    lng: currEvent.lng ? parseFloat(currEvent.lng) : null
-                },
-                destination_location: {
-                    title: nextEvent.title,
-                    lat: nextEvent.lat ? parseFloat(nextEvent.lat) : null,
-                    lng: nextEvent.lng ? parseFloat(nextEvent.lng) : null
-                }
-            })
+            const gapInHours = gapInMilliseconds / (1000 * 60 * 60);
+
+            //if more than 1 hr, flag it for LLM
+            if (gapInHours >= 1.0) {
+                detectedGaps.push({
+                    gap_start: currEvent.end_time.toISOString(),
+                    gap_end: nextEvent.start_time.toISOString(),
+                    duration_hours: gapInHours.toFixed(1),
+                    origin_location: {
+                        title: currEvent.title,
+                        lat: currEvent.lat ? parseFloat(currEvent.lat) : null,
+                        lng: currEvent.lng ? parseFloat(currEvent.lng) : null
+                    },
+                    destination_location: {
+                        title: nextEvent.title,
+                        lat: nextEvent.lat ? parseFloat(nextEvent.lat) : null,
+                        lng: nextEvent.lng ? parseFloat(nextEvent.lng) : null
+                    }
+                })
+            }
         }
     }
 
