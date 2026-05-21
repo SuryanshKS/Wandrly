@@ -41,6 +41,8 @@ model Trip{
   end_date           DateTime
   cover_image        String?
   public_share_token String?    @unique // Nullable, generated when they click "Export Travelogue"
+  lat         Float?   // Optional for older trips, required for new ones
+  lng         Float?   // Optional for older trips, required for new ones
   
   created_by         String
   creator            User       @relation("TripCreator", fields: [created_by], references: [id])

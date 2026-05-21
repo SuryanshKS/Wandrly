@@ -23,6 +23,8 @@ export const createTripTransaction = async (userId, tripData) => {
                     connect: { id: userId } // This links the trip to the logged-in User ID!
                 },
                 cover_image: tripData.cover_image,
+                lat: tripData.lat,
+                lng: tripData.lng
             }
         });
 

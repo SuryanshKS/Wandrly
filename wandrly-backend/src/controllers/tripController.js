@@ -14,6 +14,10 @@ export const createTrip = asyncHandler(async (req, res) => {
 
     const userId = req.user.id;//get the authenticated user's ID from the auth middleware
 
+    //Get coordinates immediately
+    const { lat, lng } = await getCoordinates(destination);
+
+
     // 2. BULLETPROOF URL EXTRACTOR: Checks path, secure_url, and standard url variants
     let cover_image = null;
     if (req.file) {
@@ -33,7 +37,9 @@ export const createTrip = asyncHandler(async (req, res) => {
         destination,
         start_date,
         end_date,
-        cover_image
+        cover_image,
+        lat,
+        lng
     });
 
     res.status(201).json({
@@ -154,14 +160,15 @@ export const removeMember = asyncHandler(async (req, res) => {
     }
 })
 
-export const getSingleTrip = asyncHandler(async(req,res)=>{
-    const {tripId} = req.params;
+export const getSingleTrip = asyncHandler(async (req, res) => {
+    const { tripId } = req.params;
     const userId = req.user.id;
 
-    const trip = await getTripDetails(tripId,userId);
+    const trip = await getTripDetails(tripId, userId);
 
     res.status(200).json({
-    status: "success",
-    data: trip
-  });
+        status: "success",
+        data: trip
+    });
 })
+

@@ -1,4 +1,5 @@
 import prisma from "../config/prisma.js";
+import { backfill } from "../config/test.js";
 import { getPacingAnalytics } from "../services/analyticsService.js";
 import { compileChronologicalTravelogue, processMediaUpload, removeMediaRecord } from "../services/mediaService.js";
 import asyncHandler from "../utils/asyncHandler.js";
@@ -122,6 +123,7 @@ export const getTripGallery = async (req, res) => {
 
 // NEW: Link a photo to a specific itinerary event
 export const assignMediaToEvent = async (req, res) => {
+    backfill();
   const { tripId, mediaId } = req.params;
   const { event_id } = req.body; // We will pass the event ID from the frontend dropdown
 
