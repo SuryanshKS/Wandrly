@@ -6,7 +6,7 @@ import { getTripSettlements } from '../controllers/settlementController.js';
 import { addEvent, editEvent, fillItenaryGaps, getEvents, removeEvent } from '../controllers/itenaryController.js';
 import { addItem, deleteItem, getItems, triggerAiPacking, updateItem } from '../controllers/packingController.js';
 import { addPoll, getPolls, voteInPoll } from '../controllers/pollController.js';
-import { getVibeCheck } from '../controllers/analyticsController.js';
+import { getGlobalMapData, getVibeCheck } from '../controllers/analyticsController.js';
 import { uploadMiddleware } from '../config/cloudinary.js';
 import { deleteMediaItem, getTravelogue, uploadMediaItem, getTripGallery, assignMediaToEvent } from '../controllers/mediaController.js';
 
@@ -18,6 +18,9 @@ router.use(protect);//apply the protect middleware to all routes in this router,
 // router.post('/', protect, createTrip);
 router.post('/', protect, uploadMiddleware.single('coverImage'), createTrip);//create a new trip, only for authenticated users
 router.get('/', getMyTrips);//GET /api/trips
+
+// Analytics - Global Map
+router.get('/analytics/global-map', protect, getGlobalMapData);
 
 router.post('/:tripId/members', inviteMember);//POST /api/trips/:tripId/members
 router.put('/:tripId/members/role', updateRole);
@@ -63,5 +66,22 @@ router.delete('/:tripId/media/:mediaId', deleteMediaItem);
 
 //getting trip details from tripId
 router.get('/:tripId', protect, getSingleTrip);//GET /api/trips/:tripId
+
+// TEMPORARY: Backfill route
+router.get('/admin/backfill-coordinates', async (req, res) => {
+  try {
+    const trips = await prisma.trip.findMany({ where: { lat: null } });
+    for (const trip of trips) {
+      const { lat, lng } = await getCoordinates(trip.destination);
+      await prisma.trip.update({
+        where: { id: trip.id },
+        data: { lat, lng }
+      });
+    }
+    res.status(200).json({ message: `Successfully updated ${trips.length} trips.` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 export default router;
