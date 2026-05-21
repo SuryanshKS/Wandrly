@@ -119,3 +119,33 @@ export const getTripGallery = async (req, res) => {
     res.status(500).json({ message: "Failed to fetch gallery." });
   }
 };
+
+// NEW: Link a photo to a specific itinerary event
+export const assignMediaToEvent = async (req, res) => {
+  const { tripId, mediaId } = req.params;
+  const { event_id } = req.body; // We will pass the event ID from the frontend dropdown
+
+  try {
+    // 1. Verify ownership/admin rights (optional but good practice)
+    const media = await prisma.tripMedia.findUnique({ where: { id: mediaId } });
+    if (!media) return res.status(404).json({ message: "Media not found." });
+
+    // 2. Update the record
+    const updatedMedia = await prisma.tripMedia.update({
+      where: { id: mediaId },
+      data: { 
+        event_id: event_id === "none" ? null : event_id 
+      }
+    });
+
+    res.status(200).json({ 
+      status: "success", 
+      message: "Media linked to event successfully.",
+      data: updatedMedia 
+    });
+
+  } catch (error) {
+    console.error("🔥 ASSIGN MEDIA ERROR:", error);
+    res.status(500).json({ message: "Failed to link media to event." });
+  }
+};
