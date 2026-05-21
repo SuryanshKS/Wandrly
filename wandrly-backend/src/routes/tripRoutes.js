@@ -1,5 +1,5 @@
 import express from 'express';
-import { createTrip, getMyTrips, getSingleTrip, inviteMember, removeMember, updateRole } from '../controllers/tripController.js';
+import { createTrip, getMyTrips, getSingleTrip, getTripMembers, inviteMember, removeMember, updateRole } from '../controllers/tripController.js';
 import { protect } from '../middlewares/authMiddleware.js';
 import { addExpense, settleDebt } from '../controllers/expenseController.js';
 import { getTripSettlements } from '../controllers/settlementController.js';
