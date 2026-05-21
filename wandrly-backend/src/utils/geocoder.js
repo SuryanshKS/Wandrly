@@ -2,21 +2,32 @@ import axios from 'axios';
 
 export const getCoordinates = async (address) => {
   try {
-    // Using Mapbox Geocoding API
+    // Nominatim is free. No API key needed, but we must set a User-Agent header
     const response = await axios.get(
-      `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json`,
+      `https://nominatim.openstreetmap.org/search`,
       {
         params: {
-          access_token: process.env.MAPBOX_ACCESS_TOKEN,
+          q: address,
+          format: 'json',
           limit: 1
+        },
+        headers: {
+          'User-Agent': 'Wandrly-App-Project' // Required by OpenStreetMap policy
         }
       }
     );
 
-    const [lng, lat] = response.data.features[0].center;
-    return { lat, lng };
+    if (response.data && response.data.length > 0) {
+      return { 
+        lat: parseFloat(response.data[0].lat), 
+        lng: parseFloat(response.data[0].lon) 
+      };
+    }
+    
+    console.warn(`Geocoding failed for: ${address}`);
+    return null; // Return null instead of 0,0 so we know it failed
   } catch (error) {
-    console.error("Geocoding failed:", error);
-    return { lat: 0, lng: 0 }; // Fallback
+    console.error("Geocoding request failed:", error);
+    return null;
   }
 };
