@@ -48,29 +48,33 @@ export const uploadToCloudinary = (fileBuffer) => {
     });
 };
 
-//helper to delete an image from cloudinary using the public URL string
-export const deleteFromCloudinary = async(fileUrl)=>{
-    try{
-        // Extract the public ID from the URL string
-        // Matches everything after /upload/vxxxxxxxxx/ and removes the extension (.jpg/.png)
-        const urlParts = fileUrl.split('/');
-        const folderIndex = urlParts.indexOf('wandrly_travelogue');
-        
-        if (folderIndex === -1) throw new Error("INVALID_CLOUDINARY_URL");
-
-        // Constructs 'wandrly_travelogue/filename'
-        const publicIdWithExtension = urlParts.slice(folderIndex).join('/');
-        const publicId = publicIdWithExtension.substring(0, publicIdWithExtension.lastIndexOf('.'));
-
-        // Fire destruction request to Cloudinary API
-        const result = await cloudinary.uploader.destroy(publicId);
-
-        if (result.result !== 'ok') {
-            console.warn(`⚠️ Cloudinary reporting non-optimal deletion state: ${result.result}`);
-        }
-        return result;
-    }catch (error) {
-        console.error("☁️ Cloudinary Deletion Core Error:", error);
-        throw new Error("CLOUD_DELETION_FAILED");
+// helper to delete an image from cloudinary using the public URL string
+export const deleteFromCloudinary = async (fileUrl) => {
+  try {
+    // 1. Split the URL to grab everything after "/upload/"
+    const urlParts = fileUrl.split('/upload/');
+    if (urlParts.length !== 2) {
+      throw new Error("INVALID_CLOUDINARY_URL");
     }
-}
+
+    let publicIdString = urlParts[1];
+
+    // 2. Strip out the dynamic version number (e.g., "v1779364956/") 
+    publicIdString = publicIdString.replace(/^v\d+\//, '');
+
+    // 3. Strip off the file extension (e.g., ".jpg", ".png")
+    const publicId = publicIdString.split('.')[0];
+
+    // 4. Fire destruction request to Cloudinary API using the clean publicId
+    const result = await cloudinary.uploader.destroy(publicId);
+
+    if (result.result !== 'ok' && result.result !== 'not found') {
+      console.warn(`⚠️ Cloudinary reporting non-optimal deletion state: ${result.result}`);
+    }
+    
+    return result;
+  } catch (error) {
+    console.error("☁️ Cloudinary Deletion Core Error:", error);
+    throw new Error("CLOUD_DELETION_FAILED");
+  }
+};
