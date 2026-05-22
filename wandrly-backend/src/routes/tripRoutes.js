@@ -48,7 +48,7 @@ router.use(protect);//apply the protect middleware to all routes in this router,
 // router.post('/', protect, createTrip);
 router.post('/', protect, uploadMiddleware.single('coverImage'), createTrip);//create a new trip, only for authenticated users
 router.get('/', getMyTrips);//GET /api/trips
-
+z
 // Analytics - Global Map
 router.get('/analytics/global-map', protect, getGlobalMapData);
 

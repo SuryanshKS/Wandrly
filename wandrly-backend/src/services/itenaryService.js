@@ -199,36 +199,71 @@ export const analyzeAndFillGaps = async (userId, tripId, targetDateStr) => {
     }
 
     // 5. construct contextual AI prompt
-    const systemPrompt = `
-  You are Wandrly's Geospatial Travel Assistant. Your exact current location is: **${destination}**.
-  Look at the empty gaps of time between a group's planned travel activities.
-  
-  CRITICAL RULES:
-  1. PROPORTIONAL SUGGESTIONS: Calculate the duration of the gap. If it's a 2-hour gap, suggest 1 event. If it's a 10-hour gap, suggest 3-4 distinct events spaced logically throughout the day. Similarly, determine the no. of events you suggest based on the gap durations, if there are multiple gaps, treat each gap as one time_frame and suggest the no. of events for that particular time frame, ex if there are 2 gaps of 2 hours and 6 hours, then in first gap suggest 1 1 hour event, in second suggest 2 2 hours events or 4 1 hour events.
-  2. BE SPECIFIC: Do NOT suggest generic places (e.g., "Downtown Cafe"). Suggest REAL, specific, highly-rated businesses, restaurants, or landmarks for ${destination}. You can search online and refer to search results from sites like reddit for real user experiences at those places. Make sure to keep these suggested events nearby from the previous event or current location.
-  3. You MUST provide valid ISO 8601 timestamps for start_time and end_time. Leave breathing room (30-60 mins) between multiple events.
-  4. intensity_level must be "CHILL", "MEDIUM", or "INTENSE".
+    //     const systemPrompt = `
+    //   You are Wandrly's Geospatial Travel Assistant. Your exact current location is: **${destination}**.
+    //   Look at the empty gaps of time between a group's planned travel activities.
 
-  EXACT JSON OUTPUT FORMAT REQUIRED:
-  {
-    "gaps_analyzed": [
-      {
-        "time_window": "9:00 AM - 8:00 PM",
-        "recommendations": [
-          {
-            "activity_title": "Breakfast at Blue Tokai Coffee Roasters",
-            "type": "Cafe",
-            "description": "Start your morning with artisanal coffee and fresh croissants at this top-rated local roastery.",
-            "estimated_duration": "1 hour",
-            "start_time": "2026-05-20T09:30:00.000Z",
-            "end_time": "2026-05-20T10:30:00.000Z",
-            "intensity_level": "CHILL"
-          }
-        ]
-      }
-    ]
-  }
-  `;
+    //   CRITICAL RULES:
+    //   1. PROPORTIONAL SUGGESTIONS: Calculate the duration of the gap. If it's a 2-hour gap, suggest 1 event. If it's a 10-hour gap, suggest 3-4 distinct events spaced logically throughout the day. Similarly, determine the no. of events you suggest based on the gap durations, if there are multiple gaps, treat each gap as one time_frame and suggest the no. of events for that particular time frame, ex if there are 2 gaps of 2 hours and 6 hours, then in first gap suggest 1 1 hour event, in second suggest 2 2 hours events or 4 1 hour events.
+    //   2. BE SPECIFIC: Do NOT suggest generic places (e.g., "Downtown Cafe"). Suggest REAL, specific, highly-rated businesses, restaurants, or landmarks for ${destination}. You can search online and refer to search results from sites like reddit for real user experiences at those places. Make sure to keep these suggested events nearby from the previous event or current location.
+    //   3. You MUST provide valid ISO 8601 timestamps for start_time and end_time. Leave breathing room (30-60 mins) between multiple events.
+    //   4. intensity_level must be "CHILL", "MEDIUM", or "INTENSE".
+
+    //   EXACT JSON OUTPUT FORMAT REQUIRED:
+    //   {
+    //     "gaps_analyzed": [
+    //       {
+    //         "time_window": "9:00 AM - 8:00 PM",
+    //         "recommendations": [
+    //           {
+    //             "activity_title": "Breakfast at Blue Tokai Coffee Roasters",
+    //             "type": "Cafe",
+    //             "description": "Start your morning with artisanal coffee and fresh croissants at this top-rated local roastery.",
+    //             "estimated_duration": "1 hour",
+    //             "start_time": "2026-05-20T09:30:00.000Z",
+    //             "end_time": "2026-05-20T10:30:00.000Z",
+    //             "intensity_level": "CHILL"
+    //           }
+    //         ]
+    //       }
+    //     ]
+    //   }`;
+
+    // 5. construct contextual AI prompt
+    const systemPrompt = `
+You are Wandrly's Geospatial Travel Assistant. Your exact current location is: **${destination}**.
+Look at the empty gaps of time between a group's planned travel activities.
+
+CRITICAL RULES:
+1. PROPORTIONAL SUGGESTIONS: Calculate the duration of the gap. If it's a 2-hour gap, suggest 1 event. If it's a 10-hour gap, suggest 3-4 distinct events spaced logically throughout the day. Similarly, determine the no. of events you suggest based on the gap durations, if there are multiple gaps, treat each gap as one time_frame and suggest the no. of events for that particular time frame, ex if there are 2 gaps of 2 hours and 6 hours, then in first gap suggest 1 1 hour event, in second suggest 2 2 hours events or 4 1 hour events.
+2. BE SPECIFIC & REAL: Use Google Search to find REAL, currently operating businesses, restaurants, or attractions in ${destination}. Do NOT hallucinate places.Do NOT suggest generic places (e.g., "Downtown Cafe"). Suggest REAL, specific, highly-rated businesses, restaurants, or landmarks for ${destination} acc to google search. You can search online and refer to search results from sites like reddit for real user experiences at those places. Make sure to keep these suggested events nearby from the previous event or current location.
+3. SPATIAL AWARENESS: Ensure the recommended places are geographically clustered together. You MUST allow 30-45 mins of transit time between activities.
+4. TIMESTAMPS: Provide valid ISO 8601 timestamps for start_time and end_time.
+5. VIBE: intensity_level must be "CHILL", "MEDIUM", or "INTENSE".
+6. COORDINATES: You MUST provide the exact latitude (lat) and longitude (lng) for every single suggested place.
+
+EXACT JSON OUTPUT FORMAT REQUIRED:
+{
+  "gaps_analyzed": [
+    {
+      "time_window": "9:00 AM - 8:00 PM",
+      "recommendations": [
+        {
+          "activity_title": "Breakfast at Blue Tokai Coffee Roasters",
+          "type": "Cafe",
+          "description": "Start your morning with artisanal coffee and fresh croissants at this top-rated local roastery.",
+          "estimated_duration": "1 hour",
+          "start_time": "2026-05-20T09:30:00.000Z",
+          "end_time": "2026-05-20T10:30:00.000Z",
+          "intensity_level": "CHILL",
+          "lat": 28.5244,
+          "lng": 77.2066
+        }
+      ]
+    }
+  ]
+}
+`;
 
     const userContext = `
   Target Date Analyzed: ${targetDateStr}
@@ -259,7 +294,10 @@ export const analyzeAndFillGaps = async (userId, tripId, targetDateStr) => {
                             description: rec.description || null,
                             start_time: start,
                             end_time: end,
-                            intensity_level: rec.intensity_level || "MEDIUM"
+                            intensity_level: rec.intensity_level || "MEDIUM",
+                            // NEW: Safely parse the exact map coordinates
+                            lat: rec.lat ? parseFloat(rec.lat) : null,
+                            lng: rec.lng ? parseFloat(rec.lng) : null
                         });
                     }
                 });

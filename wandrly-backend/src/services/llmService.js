@@ -14,6 +14,7 @@ export const generativeStructuredAIResponse = async (systemPrompt, userContext) 
         //we use flash as its fast and handles JSON perfectly
         const model = genAI.getGenerativeModel({
             model: "gemini-2.5-flash",
+            tools: [{ googleSearch: {} }], // NEW: Enables real-time map/search grounding!
             generationConfig: {
                 responseMimeType: "application/json",
             }
