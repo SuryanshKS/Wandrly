@@ -291,7 +291,7 @@ export default function DashboardPage() {
                                             {trips.length} Visited Destinations
                                         </span>
                                     </div>
-                                    <GlobalGlobe trips={trips} />
+                                    <GlobalGlobe trips={mapData} />
                                 </div>
                             </div>
 
