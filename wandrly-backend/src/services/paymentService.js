@@ -19,7 +19,7 @@ export const validateTripCreationLimit = async(userId)=>{
     });
 
     // Enforce strict limit boundary for tier compliance
-    if (ownedTripsCount >= 1) {
+    if (ownedTripCount >= 1) {
         throw new Error("PAYWALL_LIMIT_REACHED");
     }
 };
