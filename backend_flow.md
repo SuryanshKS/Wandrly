@@ -1,4 +1,4 @@
-# Travel Itenary Planner Application - Wandrly
+# Travel Itenary Planner Application - Wandrly BACKEND
 
 1. Role based permissions (like Admin, Treasurer, Editor, Viewer), the user creating the trip can assign roles to other group members. 
 -> Controlled access over the trip planning, useful for discussing API security and authorization in the project.
@@ -209,3 +209,97 @@ To keep our engineering clean, we first design the DB queries and REST to guaran
 
 
 -> After socket.io polling feature, we will implement the vibe-check dashboard feature as all the necessary data for it has been created while creating itenary events we just need to process them.
+
+-> Now we will implement an LLM service for all the additional features like packing-list, meeting-point and fill-the gap.
+
+-> Using this LLM service, lets now implement the weather and itenary packing list feature. We have a PackingList table with an auto_generated_reason field. There are 3 tasks in order -
+1. Gather the context - fetch the trip destination, the chronological itenary events and the weather forecast.
+2. Consult the LLM - pass this data to LLM with a prompt and get JSON response.
+3. Commit to DB - parse the AI response and bulk insert them in DB.
+
+
+-> After this we can implement the "Fill the gap" feature, algo is 4 layer -
+1. Fetches all events for a specific day
+2. Loops through events and find any gaps b/w end_time of eventA and start_time of eventB that are more than 1 hour.
+3. Grabs geospatial coordinates(lat,lng) of those surrounding events.
+4. Passes the spatial-temporal window to LLM to suggest 2-3 low commitment, hyper local spots to kill time.
+
+-> After this, we move to the "Meeting points" feature, we dont need LLM or DB for this functionality, no use in writing the locations of users every 3 secs in DB, we will be building a Transient Websocket room :
+1. The trigger : 30 mins before a scheduled event, the frontend prompts users to share live location for this event.
+2. The socket connection : if they click yes, their devices join a specific socket.io room.
+3. The data stream : The device emits a payload like { userId: 123, lat: 15.38, lng: 73.83 }.
+4. The broadcast : Your server acts as a pure mirror, instantly emitting that payload to everyone else in room so frontend map markers move in real time.
+5. The cleanup : the room is destroyed as soon as event starts and data disappears forever, saving memory and protecting user privacy.
+
+** BENEFIT of using websocket instead of a standard Express POST controller and saved them to your cloud PostgreSQL database, you would block your application threads with endless disk I/O operations, balloon your database storage, and incur heavy database connection bills.
+
+By keeping the coordinate stream entirely in memory within Socket.io's transport layer, the server processes the incoming packets in a sub-millisecond memory pipeline and routes them right back out to the other clients. The network footprint remains exceptionally lean. 
+
+
+-> Now, we will be dealing with the travelogue export feature. It will be a 3 tier architecture:
+1. The binary ingestion layer (multer) - express cant natively read files sent from the frontend. We will use a middleware called multer to intercept incoming file stream and hold the file temporarily in server memory.
+2. The cloud storage (cloudinary) - server will stream this file immediately to a third party object storage bucket called cloudinary, that saves the file and sends back a secure and permanent public image URL.
+3. The relational ledger (prisma) - we save the URL inside DB TripMedia table linked to trip_id and the specific event_id.
+
+**When the frontend request travelogue export we dont want to be hitting 10 different APIs for maps, events and photos, we will build a single highly optimised query that fetches the entire chronological journey in one go. It will look like :
+
+```
+export const getTravelogueData = async (tripId) => {
+    return await prisma.itineraryEvent.findMany({
+        where: { 
+            trip_id: tripId,
+            // Only grab events that actually have coordinates assigned
+            NOT: { lat: null, lng: null } 
+        },
+        include: {
+            media: {
+                select: {
+                    file_url: true,
+                    uploader: { select: { name: true } }
+                }
+            }
+        },
+        orderBy: { start_time: 'asc' } // Traces the route chronologically!
+    });
+};
+```
+
+
+-> At the end we want to implement a premium firewall where we are integrating Razorpay. To build a secure  monetization layer, we will use a 3-way handshake architecture-
+
+1. The paywall and order initiation - we intercept the trip creation flow, if a free user already has one trip we block them. To unlock it , we create an official bank verified order id from Razorpay's API and send it to frontend.
+
+2.  The frontend overlay - the frontend takes the order id, opens the secure native razorpay checkout modal, collects the card/UPI details safely on Razorpay's infra and process the money.
+
+3. The webhook firewall - once the bank approves the transaction, razorpay's cloud servers fire an asynchronous server-to-server alert (a webhook) to our backend. We cryptographically verify that this message actually came from Razorpay and instantly upgrade them from free to paid user in DB.
+
+-> Now we will host our backend
+
+
+
+
+*** UPDATES IN BACKEND ***
+-> We need to add a route to get a trip details for a tripId, we currently only have routes for members, expenses, adding/removing events, packing list, polls, vibe check, fill the gap, travelogue, adding/deleting media items.
+
+-> Update the ItenaryEvent schema to include a description, which will be generated by AI for fill-the-gap feature and update the system prompt in itenaryService to provide the no. of events based on the gaps found and provide actual events/locations at the place instead of generic outputs.
+
+-> Update itenary service to fetch the Trip's location and feed to LLM to suggest accurate events, places name.
+
+-> Update itenary service to take care of days with zero events.
+
+-> Update media controller to just upload the URL given by multer middleware to DB as middleware automatically handles upload to cloudinary.
+
+-> Updated cloudinary delete fxn to better handle URLs
+
+-> Added new feature to attach an image to a specific event for the purpose of travelogue
+
+-> Update Trip table to have lat,lng for global mapbox feature. We store only a destination string but will convert the destination string to lat,lng using a geocoding API.
+
+-> Adding a GET route for getting all members who are part of a trip
+
+-> Updating LLM service to use map/search grounding from gemini-2.5-flash to improve fill the gap feature to suggest events which are geographically close to each other
+
+-> Updated userController -> registerUser to generate a jwt so that user doesnt need to enter email pass immediately again after creating account.
+
+-> Improvinge the media upload pipeline to include q_auto (quality) and f_auto (format) optimisation which can help reduce image sizes by upto 80%. Initialise the storage with cloudinary and pass in q_auto and f_auto to upload optimised image directly and give the optimised image's url and store in DB, we can delete the uploadToCloudinary fxn in cloudinary.js and processMediaItem service fxn as uploading happens through the controller fxn and the storage initialised in cloudinary.js 
+*But we want to implement role based access control (RBAC), and it was in the service fxn, so as we are deleting it, we need to add RBAC protection to the media upload route.
