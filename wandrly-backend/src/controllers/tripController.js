@@ -215,9 +215,10 @@ export const searchLocations = asyncHandler(async (req, res) => {
             text: query,
             apiKey: GEOAPIFY_API_KEY,
             limit: 5,
-            filter: "countrycode:in" // Keeps it India-only!
+            // filter: "countrycode:in" // Keeps it India-only!
         }
     });
 
+    console.log("SEARCH LOGS - Query:", query); // You will see this in logs when you type!
     res.status(200).json(response.data.features);
 });

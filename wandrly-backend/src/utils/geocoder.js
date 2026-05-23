@@ -48,7 +48,7 @@ export const getCoordinates = async (address) => {
 
         console.log("FINAL API REQUEST URL:", url);
         console.log("FINAL PARAMS SENT:", {
-            text: query,
+            text: address,
             apiKey: "HIDDEN",
             limit: 5
             // Make sure 'filter' is NOT in this list
