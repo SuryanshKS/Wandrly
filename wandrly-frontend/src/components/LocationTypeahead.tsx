@@ -134,136 +134,146 @@ import { useState, useEffect, useRef } from "react";
 import { MapPin, Search, Loader2 } from "lucide-react";
 import axios from "axios";
 
-export interface OpenMeteoResult {
-  id: number;
-  name: string;
-  latitude: number;
-  longitude: number;
-  country: string;
-  admin1?: string; // This is usually the State or Province
+// export interface OpenMeteoResult {
+//   id: number;
+//   name: string;
+//   latitude: number;
+//   longitude: number;
+//   country: string;
+//   admin1?: string; // This is usually the State or Province
+// }
+
+// Geoapify returns features with properties containing the data
+export interface LocationResult {
+    properties: {
+        formatted: string;
+        lat: number;
+        lon: number;
+    };
 }
 
 interface LocationTypeaheadProps {
-  value: string;
-  onChange: (value: string, lat?: number, lng?: number) => void;
-  placeholder?: string;
+    value: string;
+    onChange: (value: string, lat?: number, lng?: number) => void;
+    placeholder?: string;
 }
 
 export default function LocationTypeahead({ value, onChange, placeholder = "Search destination..." }: LocationTypeaheadProps) {
-  const [query, setQuery] = useState(value);
-  const [results, setResults] = useState<OpenMeteoResult[]>([]);
-  const [isOpen, setIsOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const wrapperRef = useRef<HTMLDivElement>(null);
+    const [query, setQuery] = useState(value);
+    const [results, setResults] = useState<LocationResult[]>([]);
+    const [isOpen, setIsOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const wrapperRef = useRef<HTMLDivElement>(null);
 
-  // Sync external value changes
-  useEffect(() => {
-    setQuery(value);
-  }, [value]);
+    // Sync external value changes
+    useEffect(() => {
+        setQuery(value);
+    }, [value]);
 
-  // Handle clicking outside the dropdown to close it
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  // Debounced API Fetch using Open-Meteo
-  useEffect(() => {
-    if (!query || query.length < 2) {
-      setResults([]);
-      setIsOpen(false);
-      return;
-    }
-
-    const delayDebounceFn = setTimeout(async () => {
-      setIsLoading(true);
-      try {
-        // Open-Meteo Free Geocoding API - No Key Required!
-        const res = await axios.get(
-          `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=en&format=json`
-        );
-        
-        // Open-Meteo returns data inside a 'results' array
-        if (res.data && res.data.results && res.data.results.length > 0) {
-          setResults(res.data.results);
-          setIsOpen(true);
-        } else {
-          setResults([]);
+    // Handle clicking outside the dropdown to close it
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
         }
-      } catch (error) {
-        console.error("Location search failed:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    }, 400); // 400ms debounce
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
-    return () => clearTimeout(delayDebounceFn);
-  }, [query]);
+    // Debounced API Fetch using Open-Meteo
+    useEffect(() => {
+        if (!query || query.length < 2) {
+            setResults([]);
+            setIsOpen(false);
+            return;
+        }
 
-  const handleSelect = (loc: OpenMeteoResult) => {
-    // Format the name nicely: "City, State, Country" or just "City, Country"
-    const displayName = loc.admin1 
-      ? `${loc.name}, ${loc.admin1}, ${loc.country}`
-      : `${loc.name}, ${loc.country}`;
+        const delayDebounceFn = setTimeout(async () => {
+            setIsLoading(true);
+            try {
+                // Pointing to your backend search-locations route
+                const res = await axios.get(
+                    `${process.env.NEXT_PUBLIC_API_URL}/api/trips/search-locations?query=${encodeURIComponent(query)}`
+                );
 
-    setQuery(displayName);
-    setIsOpen(false);
-    
-    // Pass the formatted name and exact coordinates back to the parent
-    onChange(displayName, loc.latitude, loc.longitude);
-  };
+                if (res.data && res.data.length > 0) {
+                    setResults(res.data);
+                    setIsOpen(true);
+                } else {
+                    setResults([]);
+                }
+            } catch (error) {
+                console.error("Location search failed:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        }, 400); // 400ms debounce
 
-  return (
-    <div ref={wrapperRef} className="relative w-full">
-      <div className="relative">
-        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            onChange(e.target.value);
-          }}
-          onFocus={() => {
-            if (results.length > 0) setIsOpen(true);
-          }}
-          placeholder={placeholder}
-          className="w-full pl-9 pr-10 py-2.5 bg-white border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-        />
-        {isLoading && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2">
-            <Loader2 className="h-4 w-4 text-zinc-400 animate-spin" />
-          </div>
-        )}
-      </div>
+        return () => clearTimeout(delayDebounceFn);
+    }, [query]);
 
-      {/* The Dropdown Menu */}
-      {isOpen && results.length > 0 && (
-        <ul className="absolute z-50 w-full mt-1 bg-white border border-zinc-200 rounded-lg shadow-lg overflow-hidden max-h-60 overflow-y-auto">
-          {results.map((loc) => (
-            <li
-              key={loc.id}
-              onClick={() => handleSelect(loc)}
-              className="px-4 py-3 hover:bg-zinc-50 cursor-pointer flex items-start gap-3 border-b border-zinc-100 last:border-0 transition-colors"
-            >
-              <Search className="h-4 w-4 text-zinc-400 mt-0.5 shrink-0" />
-              <div className="flex flex-col">
-                <span className="text-sm font-semibold text-zinc-900">
-                  {loc.name}
-                </span>
-                <span className="text-xs text-zinc-500">
-                  {loc.admin1 ? `${loc.admin1}, ` : ""}{loc.country}
-                </span>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
+    const handleSelect = (loc: LocationResult) => {
+        // Format the name nicely: "City, State, Country" or just "City, Country"
+        // const displayName = loc.admin1
+        //     ? `${loc.name}, ${loc.admin1}, ${loc.country}`
+        //     : `${loc.name}, ${loc.country}`;
+
+        // setQuery(displayName);
+        // setIsOpen(false);
+
+        // // Pass the formatted name and exact coordinates back to the parent
+        // onChange(displayName, loc.latitude, loc.longitude);
+        const displayName = loc.properties.formatted;
+
+        setQuery(displayName);
+        setIsOpen(false);
+
+        // Pass the formatted name and coordinates back to the parent
+        onChange(displayName, loc.properties.lat, loc.properties.lon);
+    };
+
+    return (
+        <div ref={wrapperRef} className="relative w-full">
+            <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+                <input
+                    type="text"
+                    value={query}
+                    onChange={(e) => {
+                        setQuery(e.target.value);
+                        onChange(e.target.value);
+                    }}
+                    onFocus={() => {
+                        if (results.length > 0) setIsOpen(true);
+                    }}
+                    placeholder={placeholder}
+                    className="w-full pl-9 pr-10 py-2.5 bg-white border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                {isLoading && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <Loader2 className="h-4 w-4 text-zinc-400 animate-spin" />
+                    </div>
+                )}
+            </div>
+
+            {/* The Dropdown Menu */}
+            {isOpen && results.length > 0 && (
+                <ul className="absolute z-50 w-full mt-1 bg-white border border-zinc-200 rounded-lg shadow-lg overflow-hidden max-h-60 overflow-y-auto">
+                    {results.map((loc,index) => (
+                        <li
+                            key={index}
+                            onClick={() => handleSelect(loc)}
+                            className="px-4 py-3 hover:bg-zinc-50 cursor-pointer flex items-start gap-3 border-b border-zinc-100 last:border-0 transition-colors"
+                        >
+                            <Search className="h-4 w-4 text-zinc-400 mt-0.5 shrink-0" />
+                            <span className="text-sm text-zinc-900">
+                                {loc.properties.formatted}
+                            </span>
+                        </li>
+                    ))}
+                </ul>
+            )}
+        </div>
+    );
 }
