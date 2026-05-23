@@ -45,6 +45,7 @@ export default function DashboardPage() {
     const [trips, setTrips] = useState<Trip[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [error, setError] = useState("");
+    const [mapData, setMapData] = useState<any[]>([]); // Separated state
 
     const loadRazorpayScript = () => {
         return new Promise((resolve) => {
@@ -116,54 +117,41 @@ export default function DashboardPage() {
 
 
     useEffect(() => {
-        const fetchDashboardContent = async () => {
+        const fetchAllData = async () => {
             const token = localStorage.getItem("wandrly_token");
-
             if (!token) {
                 router.push("/login");
                 return;
             }
 
-            try {
-                setIsAuthenticated(true);
-                const config = { headers: { Authorization: `Bearer ${token}` } };
+            const config = { headers: { Authorization: `Bearer ${token}` } };
+            setIsLoadingData(true);
 
-                const [profileRes, tripsRes] = await Promise.all([
+            try {
+                // Fetch everything in parallel
+                const [profileRes, tripsRes, mapRes] = await Promise.all([
                     axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/users/me`, config),
-                    axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/trips`, config)
+                    axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/trips`, config),
+                    axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/trips/analytics/global-map`, config).catch(() => ({ data: { data: [] } }))
                 ]);
 
                 setUser(profileRes.data);
                 setTrips(tripsRes.data.trips || tripsRes.data);
-
+                setMapData(mapRes.data.data || []);
             } catch (err: any) {
-                console.error("Dashboard core sync failure:", err);
+                console.error("Dashboard sync failure:", err);
                 if (err.response?.status === 401) {
                     localStorage.removeItem("wandrly_token");
                     router.push("/login");
                 } else {
-                    const backendMsg = err.response?.data?.message || err.response?.data?.error;
-                    setError(backendMsg || "Failed to load your travel terminal.");
+                    setError("Failed to synchronize your dashboard data.");
                 }
             } finally {
                 setIsLoadingData(false);
             }
         };
 
-        fetchDashboardContent();
-
-        const fetchMapData = async () => {
-            try {
-                const token = localStorage.getItem("wandrly_token");
-                const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/trips/analytics/global-map`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                setTrips(res.data.data);
-            } catch (err) {
-                console.error("Map fetch error:", err);
-            }
-        };
-        fetchMapData();
+        fetchAllData();
     }, [router]);
 
     const handleLogout = () => {
