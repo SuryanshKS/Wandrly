@@ -46,7 +46,7 @@ app.use('/api/webhooks',webhookRoutes);
 
 //MIDDLEWARE
 app.use(cors({
-    origin:['http://localhost:3000', 'https://wandrly-alpha.vercel.app/'],
+    origin:['http://localhost:3000', 'https://wandrly-alpha.vercel.app'],
     credentials:true
 }));//enable CORS for all routes, preventing cross-origin attacks
 app.use(express.json());//parse incoming JSON requests and make the data available in req.body
