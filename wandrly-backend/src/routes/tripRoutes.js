@@ -1,5 +1,5 @@
 import express from 'express';
-import { createTrip, getMyTrips, getSingleTrip, getTripMembers, inviteMember, removeMember, updateRole } from '../controllers/tripController.js';
+import { createTrip, getMyTrips, getSingleTrip, getTripMembers, inviteMember, removeMember, searchLocations, updateRole } from '../controllers/tripController.js';
 import { protect, requireEditorOrAdmin } from '../middlewares/authMiddleware.js';
 import { addExpense, settleDebt } from '../controllers/expenseController.js';
 import { getTripSettlements } from '../controllers/settlementController.js';
@@ -41,6 +41,9 @@ const router = express.Router();
 //         res.status(500).json({ error: err.message });
 //     }
 // });
+
+
+router.get('/search-locations', searchLocations);//public routes, no auth needed
 
 router.use(protect);//apply the protect middleware to all routes in this router, so that only authenticated users can access these routes
 

@@ -200,3 +200,24 @@ export const getTripMembers = asyncHandler(async (req, res) => {
         members: members
     });
 });
+
+
+// Add to tripController.js for location seach
+export const searchLocations = asyncHandler(async (req, res) => {
+    const { query } = req.query; // e.g., /api/trips/search-locations?query=Delh
+    
+    // We use your existing logic but tweaked for 'search' instead of 'geocoding'
+    const GEOAPIFY_API_KEY = process.env.GEOAPIFY_API_KEY;
+    const url = `https://api.geoapify.com/v1/geocode/autocomplete`; // Autocomplete is better for typeaheads
+
+    const response = await axios.get(url, {
+        params: {
+            text: query,
+            apiKey: GEOAPIFY_API_KEY,
+            limit: 5,
+            filter: "countrycode:in" // Keeps it India-only!
+        }
+    });
+
+    res.status(200).json(response.data.features);
+});
