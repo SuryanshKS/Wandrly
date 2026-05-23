@@ -16,8 +16,16 @@ export const createTrip = asyncHandler(async (req, res) => {
 
     const userId = req.user.id;//get the authenticated user's ID from the auth middleware
 
-    //Get coordinates immediately
-    const { lat, lng } = await getCoordinates(destination);
+    const coordinates = await getCoordinates(destination);
+
+    // This ensures your app stays alive if the API returns no results
+    if (!coordinates) {
+        return res.status(400).json({
+            message: "We couldn't find coordinates for this destination. Please check the spelling!"
+        });
+    }
+
+    const { lat, lon } = coordinates;
 
 
     // 2. BULLETPROOF URL EXTRACTOR: Checks path, secure_url, and standard url variants
@@ -181,8 +189,8 @@ export const getTripMembers = asyncHandler(async (req, res) => {
     const members = await prisma.tripMember.findMany({
         where: { trip_id: tripId },
         include: {
-            user: { 
-                select: { id: true, name: true, email: true } 
+            user: {
+                select: { id: true, name: true, email: true }
             }
         }
     });
