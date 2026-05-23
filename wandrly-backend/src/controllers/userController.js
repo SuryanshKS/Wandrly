@@ -16,8 +16,8 @@ export const registerUser = asyncHandler(async (req, res) => {
 
     const token = jwt.sign(
         {
-            userId: user.id,
-            email: user.email,
+            userId: newUser.id,
+            email: newUser.email,
         },
         process.env.JWT_SECRET,
         {
