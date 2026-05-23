@@ -23,7 +23,7 @@
 //         lng: parseFloat(response.data[0].lon) 
 //       };
 //     }
-    
+
 //     console.warn(`Geocoding failed for: ${address}`);
 //     return null; // Return null instead of 0,0 so we know it failed
 //   } catch (error) {
@@ -42,15 +42,23 @@ export const getCoordinates = async (address) => {
             params: {
                 text: address,
                 apiKey: GEOAPIFY_API_KEY,
-                limit: 1, 
+                limit: 1,
             }
+        });
+
+        console.log("FINAL API REQUEST URL:", url);
+        console.log("FINAL PARAMS SENT:", {
+            text: query,
+            apiKey: "HIDDEN",
+            limit: 5
+            // Make sure 'filter' is NOT in this list
         });
 
         if (response.data.features && response.data.features.length > 0) {
             const [lon, lat] = response.data.features[0].geometry.coordinates;
             return { lat, lon };
         }
-        
+
         return null;
     } catch (error) {
         console.error("Geoapify Geocoding Error:", error.message);
