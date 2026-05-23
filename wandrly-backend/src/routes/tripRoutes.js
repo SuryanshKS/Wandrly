@@ -1,6 +1,6 @@
 import express from 'express';
 import { createTrip, getMyTrips, getSingleTrip, getTripMembers, inviteMember, removeMember, updateRole } from '../controllers/tripController.js';
-import { protect } from '../middlewares/authMiddleware.js';
+import { protect, requireEditorOrAdmin } from '../middlewares/authMiddleware.js';
 import { addExpense, settleDebt } from '../controllers/expenseController.js';
 import { getTripSettlements } from '../controllers/settlementController.js';
 import { addEvent, editEvent, fillItenaryGaps, getEvents, removeEvent } from '../controllers/itenaryController.js';
@@ -88,7 +88,7 @@ router.post('/:tripId/packing/auto-generate', triggerAiPacking);//for packing li
 router.post('/:tripId/itenary/fill-gaps', fillItenaryGaps);
 
 //media uploading and travelogue endpoints
-router.post('/:tripId/media/upload', uploadMiddleware.single('image'), uploadMediaItem);
+router.post('/:tripId/media/upload',protect,requireEditorOrAdmin, uploadMiddleware.single('image'), uploadMediaItem);
 router.get('/:tripId/travelogue', getTravelogue);
 router.get('/:tripId/gallery', getTripGallery); // NEW: For our Masonry UI
 router.patch('/:tripId/media/:mediaId/assign', assignMediaToEvent);//attaching an image to particular event

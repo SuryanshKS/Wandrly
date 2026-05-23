@@ -51,3 +51,19 @@ export const protect = asyncHandler(async (req,res,next)=>{
 /*
 strictly avoid relying on user IDs passed in the request body for authorization, instead, use an authentication middleware that extracts the JWT from the Bearer header, cryptographically verifies it, and attaches the authenticated user object directly to the Express req pipeline. Downstream controllers rely exclusively on req.user.id to establish ownership and permissions, making spoofing via payload manipulation impossible
 */
+
+export const requireEditorOrAdmin = asyncHandler(async (req, res, next) => {
+    const { tripId } = req.params;
+    const userId = req.user.id;
+
+    const member = await prisma.tripMember.findUnique({
+        where: { trip_id_user_id: { trip_id: tripId, user_id: userId } }
+    });
+
+    if (!member || member.role === 'VIEWER') {
+        res.status(403);
+        throw new Error("Forbidden: Viewers are restricted from contributing media.");
+    }
+
+    next(); // Security passed! Move to the next function (Multer).
+});
