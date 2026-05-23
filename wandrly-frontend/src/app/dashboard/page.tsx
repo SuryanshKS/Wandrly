@@ -26,7 +26,7 @@ interface Trip {
     destination: string;
     start_date: string;
     end_date: string;
-    cover_image?: string; // FIXED: Swapped to your exact snake_case schema naming
+    cover_image?: string;
 }
 
 interface UserProfile {
@@ -56,10 +56,10 @@ export default function DashboardPage() {
             document.body.appendChild(script);
         });
     };
+
     const handleUnlockPremium = async () => {
         const isLoaded = await loadRazorpayScript();
         if (!isLoaded) {
-            // alert("Razorpay SDK failed to load. Are you online?");
             toast.error("Razorpay SDK failed to load. Are you online?");
             return;
         }
@@ -84,8 +84,6 @@ export default function DashboardPage() {
                 order_id: order.id,
                 handler: function (response: any) {
                     // 3. Payment succeeded! 
-                    // Your backend webhook is currently processing the database update.
-                    // We wait 2 seconds to ensure the webhook finishes, then refresh the UI.
                     toast.success("Payment authorized! Synchronizing database profile...");
                     setTimeout(() => {
                         window.location.reload();
@@ -99,8 +97,6 @@ export default function DashboardPage() {
             // Handle payment failure gracefully
             rzp.on('payment.failed', function (response: any) {
                 console.error("Payment failed:", response.error.description);
-                // alert("Payment failed or was cancelled. Please try again.");
-                // Replaced alert with error toast!
                 toast.error(`Payment Failed: ${response.error.description}`);
             });
 
@@ -108,13 +104,9 @@ export default function DashboardPage() {
         } catch (error: any) {
             console.error("Payment init failed:", error);
             const msg = error.response?.data?.message || "Could not initialize payment system.";
-            // alert(msg);
-            // Replaced alert with error toast!
             toast.error(msg);
         }
     };
-
-
 
     useEffect(() => {
         const fetchAllData = async () => {
@@ -138,6 +130,7 @@ export default function DashboardPage() {
                 setUser(profileRes.data);
                 setTrips(tripsRes.data.trips || tripsRes.data);
                 setMapData(mapRes.data.data || []);
+                setIsAuthenticated(true); // Crucial to unlock the skeleton
             } catch (err: any) {
                 console.error("Dashboard sync failure:", err);
                 if (err.response?.status === 401) {
@@ -184,7 +177,6 @@ export default function DashboardPage() {
         return dest.split(",")[0];
     };
 
-
     return (
         <div className="min-h-screen bg-stone-50 dark:bg-zinc-950 pb-16">
 
@@ -208,8 +200,6 @@ export default function DashboardPage() {
                     </div>
                 </div>
             </nav>
-
-
 
             {/* CONDITIONAL MAIN CONTENT: SKELETON vs REAL DATA */}
             {!isAuthenticated || isLoadingData ? (
@@ -291,7 +281,7 @@ export default function DashboardPage() {
                                             {trips.length} Visited Destinations
                                         </span>
                                     </div>
-                                    <GlobalGlobe trips={mapData} />
+                                    <GlobalGlobe trips={mapData} /> {/* <-- THIS IS THE CRITICAL FIX */}
                                 </div>
                             </div>
 
@@ -335,18 +325,6 @@ export default function DashboardPage() {
                             </div>
 
                             {trips.length === 0 ? (
-                                // <Card className="border-dashed border-2 border-stone-200 shadow-none flex flex-col items-center justify-center h-75 bg-stone-50/50 rounded-2xl">
-                                //     <div className="bg-white p-4 rounded-full shadow-sm mb-4 border border-stone-100">
-                                //         <MapPin className="h-7 w-7 text-blue-500" />
-                                //     </div>
-                                //     <h3 className="text-base font-semibold text-zinc-900">Your layout stream is empty</h3>
-                                //     <p className="text-sm text-stone-500 max-w-xs text-center mt-1 mb-5 leading-relaxed">
-                                //         Fire your initialization trigger to seed your first Cloudinary cover mapping.
-                                //     </p>
-                                //     <Button onClick={() => setIsModalOpen(true)} className="rounded-xl font-bold">
-                                //         <Plus className="h-4 w-4 mr-1.5" /> Initialize Journey
-                                //     </Button>
-                                // </Card>
                                 <EmptyState
                                     type="trip"
                                     title="Your layout stream is empty"
