@@ -42,9 +42,7 @@ export const getCoordinates = async (address) => {
             params: {
                 text: address,
                 apiKey: GEOAPIFY_API_KEY,
-                limit: 1,
-                // THE FIX: This restricts the search exclusively to India
-                bias: "countrycode:in" 
+                limit: 1, 
             }
         });
 
