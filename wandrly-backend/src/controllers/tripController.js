@@ -28,7 +28,6 @@ export const createTrip = asyncHandler(async (req, res) => {
 
     const { lat, lon } = coordinates;
 
-
     // 2. BULLETPROOF URL EXTRACTOR: Checks path, secure_url, and standard url variants
     let cover_image = null;
     if (req.file) {
@@ -49,8 +48,8 @@ export const createTrip = asyncHandler(async (req, res) => {
         start_date,
         end_date,
         cover_image,
-        lat,
-        lng
+        lat:lat,
+        lng:lon,
     });
 
     res.status(201).json({
