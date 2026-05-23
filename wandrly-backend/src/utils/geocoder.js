@@ -44,7 +44,7 @@ export const getCoordinates = async (address) => {
                 apiKey: GEOAPIFY_API_KEY,
                 limit: 1,
                 // THE FIX: This restricts the search exclusively to India
-                filter: "countrycode:in" 
+                bias: "countrycode:in" 
             }
         });
 
