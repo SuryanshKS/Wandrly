@@ -13,10 +13,6 @@ export const createExpenseTransaction = async (requesterId, tripId, expenseData,
         }
     });
 
-    // if (!memberCheck || memberCheck.role === 'VIEWER') {
-    //     throw new Error("NOT_AUTHORIZED_FINANCE");
-    // }
-
     //context-aware checking
     // If you aren't in the trip at all, OR (you are a VIEWER AND this is NOT a settlement) -> Blocked.
     if (!memberCheck || (!isSettlement && memberCheck.role === 'VIEWER')) {
