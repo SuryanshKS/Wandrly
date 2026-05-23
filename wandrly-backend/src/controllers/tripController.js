@@ -1,3 +1,4 @@
+import axios from "axios";
 import prisma from "../config/prisma.js";
 import { addMemberToTrip, changeMemberRole, createTripTransaction, getTripDetails, getUserTripsList, removeMemberFromTrip } from "../services/tripService.js";
 import asyncHandler from "../utils/asyncHandler.js";
