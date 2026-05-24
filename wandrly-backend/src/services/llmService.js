@@ -42,7 +42,7 @@ export const generativeStructuredAIResponse = async (systemPrompt, userContext) 
         // Initialize the model WITH grounding, but WITHOUT the strict JSON mime type
         const model = genAI.getGenerativeModel({
             model: "gemini-2.5-flash",
-            tools: [{ googleSearch: {} }] 
+            tools: [{ googleSearch: {} }]
         });
 
         const fullPrompt = `${systemPrompt}\n\nHere is the contextual data:\n${userContext}\n\nCRITICAL: Respond ONLY with the raw JSON object. Do not include markdown formatting, code blocks, or conversational text.`;
@@ -53,9 +53,23 @@ export const generativeStructuredAIResponse = async (systemPrompt, userContext) 
         // Fallback: Strip markdown code blocks just in case Gemini still wraps it
         textResponse = textResponse.replace(/```json/gi, '').replace(/```/gi, '').trim();
 
+        try {
+            // 2. Try to parse the cleaned string
+            const parsedData = JSON.parse(textResponse);
+            return parsedData;
+        } catch (error) {
+            // 3. Ultimate fallback: Extract whatever is between the first {/[ and last }/]
+            const jsonMatch = textResponse.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+
+            if (jsonMatch) {
+                return JSON.parse(jsonMatch[0]);
+            } else {
+                throw new Error("Could not extract valid JSON from AI response.");
+            }
+        }
         // Parse the cleaned string directly into a JavaScript Object
-        return JSON.parse(textResponse);
-    } 
+        // return JSON.parse(textResponse);
+    }
     catch (error) {
         console.error("LLM Generation Error:", error);
         throw error;
