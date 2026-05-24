@@ -241,6 +241,7 @@ CRITICAL RULES:
 4. TIMESTAMPS: Provide valid ISO 8601 timestamps for start_time and end_time.
 5. VIBE: intensity_level must be "CHILL", "MEDIUM", or "INTENSE".
 6. COORDINATES: You MUST provide the exact latitude (lat) and longitude (lng) for every single suggested place.
+7. CRITICAL: You must respond with ONLY valid, raw JSON. Do not include any conversational text, markdown formatting, or code blocks (like \`\`\`json.). Start your response immediately with '{' or '['.
 
 EXACT JSON OUTPUT FORMAT REQUIRED:
 {
@@ -273,7 +274,7 @@ EXACT JSON OUTPUT FORMAT REQUIRED:
 
     // 6. execute AI processing
     const aiData = await generativeStructuredAIResponse(systemPrompt, userContext);
-    console.log("🤖 RAW AI RESPONSE:", JSON.stringify(aiData, null, 2));
+    // console.log("🤖 RAW AI RESPONSE:", JSON.stringify(aiData, null, 2));
 
     // 7. Safely extract nested recommendations from the AI's preferred format
     let eventsToCreate = [];
